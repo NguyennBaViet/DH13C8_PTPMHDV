@@ -62,10 +62,3 @@ docker compose up -d
 | POST | `/api/payments` | Thanh toán |
 | GET | `/api/users/me/bookings` | Lịch sử đặt phòng |
 
-## 🗃 Cấu Trúc Database
-
-14 bảng: `users`, `refresh_tokens`, `hotels`, `amenities`, `hotel_amenities`,  
-`rooms`, `room_amenities`, `room_availability`, `promotions`, `bookings`,  
-`payments`, `reviews`, `notifications`, `audit_log`
-
----
