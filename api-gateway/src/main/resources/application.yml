@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: api-gateway
+
+  # Tắt Spring Cloud Discovery (không dùng Eureka)
+  cloud:
+    discovery:
+      enabled: false
+
+    gateway:
+      # ── CORS toàn gateway ─────────────────────────────────
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+            allowedHeaders: "*"
+            allowCredentials: true
+
+      # ── Routes ────────────────────────────────────────────
+      routes:
+
+        # Auth Service – public, không cần AuthFilter
+        - id: auth-service
+          uri: http://localhost:8021
+          predicates:
+            - Path=/api/auth/**
+
+        # User Service – yêu cầu JWT
+        - id: user-service
+          uri: http://localhost:8022
+          predicates:
+            - Path=/api/users/**,/api/reviews/**
+          filters:
+            - AuthFilter
+
+        # Hotel-Room Service – GET public, POST/PUT/DELETE cần JWT (xử lý trong service)
+        - id: hotel-room-service
+          uri: http://localhost:8023
+          predicates:
+            - Path=/api/hotels/**,/api/rooms/**,/api/amenities/**
+
+        # Booking Service – yêu cầu JWT
+        - id: booking-service
+          uri: http://localhost:8024
+          predicates:
+            - Path=/api/bookings/**
+          filters:
+            - AuthFilter
+
+        # Payment-Noti Service – yêu cầu JWT
+        - id: payment-noti-service
+          uri: http://localhost:8025
+          predicates:
+            - Path=/api/payments/**,/api/notifications/**
+          filters:
+            - AuthFilter
+
+server:
+  port: 8020
+
+# ── JWT ────────────────────────────────────────────────────
+app:
+  jwt:
+    secret: dh13c8-khachsan-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+
+# ── Tắt hostname lookup của Spring Cloud ──────────────────
+spring.cloud.inetutils.ignore-interfaces: ".*"
+spring.cloud.inetutils.preferred-networks: "127.0.0"
+
+# ── Logging ────────────────────────────────────────────────
+logging:
+  level:
+    dh13c8: DEBUG
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO

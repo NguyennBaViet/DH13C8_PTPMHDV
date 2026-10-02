@@ -1,0 +1,18 @@
+USE khachsan;
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS bookings;
+DROP TABLE IF EXISTS promotions;
+DROP TABLE IF EXISTS room_availability;
+DROP TABLE IF EXISTS room_amenities;
+DROP TABLE IF EXISTS rooms;
+DROP TABLE IF EXISTS hotel_amenities;
+DROP TABLE IF EXISTS hotels;
+DROP TABLE IF EXISTS amenities;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS users;
+SET FOREIGN_KEY_CHECKS = 1;
+SELECT 'All tables dropped OK' AS result;
