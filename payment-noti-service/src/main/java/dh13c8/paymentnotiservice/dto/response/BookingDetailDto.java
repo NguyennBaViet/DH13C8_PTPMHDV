@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.dto.response;
+package dh13c8.paymentnotiservice.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;

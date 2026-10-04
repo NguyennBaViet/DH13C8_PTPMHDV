@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.client;
+package dh13c8.paymentnotiservice.client;
 
 import dh13c8.paymentnotiservice.dto.response.BookingDetailDto;
 import lombok.extern.slf4j.Slf4j;

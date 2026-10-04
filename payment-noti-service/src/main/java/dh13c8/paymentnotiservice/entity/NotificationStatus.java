@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.entity;
+package dh13c8.paymentnotiservice.entity;
 
 public enum NotificationStatus {
     PENDING,

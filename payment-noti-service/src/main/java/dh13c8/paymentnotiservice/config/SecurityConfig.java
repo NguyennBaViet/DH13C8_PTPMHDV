@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.config;
+package dh13c8.paymentnotiservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

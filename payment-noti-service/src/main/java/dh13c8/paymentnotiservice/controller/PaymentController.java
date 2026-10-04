@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.controller;
+package dh13c8.paymentnotiservice.controller;
 
 import dh13c8.paymentnotiservice.dto.ApiResponse;
 import dh13c8.paymentnotiservice.dto.request.CreatePaymentRequest;
@@ -33,7 +33,7 @@ public class PaymentController {
             @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
             @Valid @RequestBody CreatePaymentRequest req) {
 
-        log.info("? POST /api/payments - userId={}, bookingId={}", userId, req.getBookingId());
+        log.info("POST /api/payments - userId={}, bookingId={}", userId, req.getBookingId());
         PaymentResponse response = paymentService.createPayment(userId, req);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Tao yeu cau thanh toan thanh cong", response));
     }
@@ -43,7 +43,7 @@ public class PaymentController {
             @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
             @Valid @RequestBody ProcessPaymentRequest req) {
 
-        log.info("? POST /api/payments/process - userId={}, paymentId={}", userId, req.getPaymentId());
+        log.info("POST /api/payments/process - userId={}, paymentId={}", userId, req.getPaymentId());
         PaymentResponse response = paymentService.processMockPayment(req, userId);
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
     }
@@ -53,7 +53,7 @@ public class PaymentController {
             @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
             @Valid @RequestBody CreatePaymentRequest req) {
 
-        log.info("? POST /api/payments/stripe/create-intent - userId={}, bookingId={}", userId, req.getBookingId());
+        log.info("POST /api/payments/stripe/create-intent - userId={}, bookingId={}", userId, req.getBookingId());
         PaymentResponse response = paymentService.createStripePayment(userId, req);
         return ResponseEntity.ok(ApiResponse.ok("Khoi tao Stripe sandbox thanh cong", response));
     }
@@ -63,7 +63,7 @@ public class PaymentController {
             @RequestBody Map<String, String> body) {
 
         String paymentIntentId = body.get("paymentIntentId");
-        log.info("? POST /api/payments/stripe/confirm - intentId={}", paymentIntentId);
+        log.info("POST /api/payments/stripe/confirm - intentId={}", paymentIntentId);
         PaymentResponse response = paymentService.confirmStripePayment(paymentIntentId);
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
     }
@@ -75,7 +75,7 @@ public class PaymentController {
             @RequestHeader(value = "X-User-Role", defaultValue = "GUEST") String role,
             @RequestBody(required = false) RefundRequest req) {
 
-        log.info("? POST /api/payments/{}/refund - userId={}, role={}", id, userId, role);
+        log.info("POST /api/payments/{}/refund - userId={}, role={}", id, userId, role);
         PaymentResponse response = paymentService.refund(id, req, userId, role);
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
     }
@@ -84,7 +84,7 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> createPaymentInternal(
             @RequestBody Map<String, Object> request) {
 
-        log.info("? POST /api/payments/internal/create - {}", request);
+        log.info("POST /api/payments/internal/create - {}", request);
         PaymentResponse response = paymentService.createPaymentInternal(request);
         return ResponseEntity.ok(response);
     }
@@ -95,7 +95,7 @@ public class PaymentController {
             @RequestParam(required = false) BigDecimal amount,
             @RequestParam(required = false, defaultValue = "Huy dat phong qua he thong") String reason) {
 
-        log.info("? POST /api/payments/internal/{}/refund - amount={}", paymentId, amount);
+        log.info("POST /api/payments/internal/{}/refund - amount={}", paymentId, amount);
         PaymentResponse response = paymentService.refundInternal(paymentId, amount, reason);
         return ResponseEntity.ok(response);
     }

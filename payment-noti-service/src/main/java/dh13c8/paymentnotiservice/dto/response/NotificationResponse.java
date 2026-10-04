@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.dto.response;
+package dh13c8.paymentnotiservice.dto.response;
 
 import dh13c8.paymentnotiservice.entity.NotificationChannel;
 import dh13c8.paymentnotiservice.entity.NotificationStatus;

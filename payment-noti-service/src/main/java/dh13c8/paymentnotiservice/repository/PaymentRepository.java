@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.repository;
+package dh13c8.paymentnotiservice.repository;
 
 import dh13c8.paymentnotiservice.entity.Payment;
 import dh13c8.paymentnotiservice.entity.PaymentStatus;

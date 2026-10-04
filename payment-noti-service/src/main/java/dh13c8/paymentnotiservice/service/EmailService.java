@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.service;
+package dh13c8.paymentnotiservice.service;
 
 public interface EmailService {
 

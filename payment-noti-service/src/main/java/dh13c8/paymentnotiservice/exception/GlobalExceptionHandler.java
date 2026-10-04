@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.exception;
+package dh13c8.paymentnotiservice.exception;
 
 import dh13c8.paymentnotiservice.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.controller;
+package dh13c8.paymentnotiservice.controller;
 
 import dh13c8.paymentnotiservice.dto.ApiResponse;
 import dh13c8.paymentnotiservice.dto.request.SendEmailRequest;
@@ -28,7 +28,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        log.info("? GET /api/notifications/me - userId={}", userId);
+        log.info("GET /api/notifications/me - userId={}", userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<NotificationResponse> result = notificationService.getUserNotifications(userId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(result));
@@ -48,14 +48,14 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<NotificationResponse>> sendEmail(
             @Valid @RequestBody SendEmailRequest req) {
 
-        log.info("? POST /api/notifications/send-email to: {}", req.getRecipientEmail());
+        log.info("POST /api/notifications/send-email to: {}", req.getRecipientEmail());
         NotificationResponse response = notificationService.sendCustomEmail(req);
         return ResponseEntity.ok(ApiResponse.ok("Gui thong bao thanh cong", response));
     }
 
     @PostMapping("/resend/{id}")
     public ResponseEntity<ApiResponse<NotificationResponse>> resendNotification(@PathVariable Long id) {
-        log.info("? POST /api/notifications/resend/{}", id);
+        log.info("POST /api/notifications/resend/{}", id);
         NotificationResponse response = notificationService.resendNotification(id);
         return ResponseEntity.ok(ApiResponse.ok("Thuc hien gui lai thong bao thanh cong", response));
     }

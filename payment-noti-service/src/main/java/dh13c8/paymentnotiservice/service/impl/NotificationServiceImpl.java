@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.service.impl;
+package dh13c8.paymentnotiservice.service.impl;
 
 import dh13c8.paymentnotiservice.dto.request.SendEmailRequest;
 import dh13c8.paymentnotiservice.dto.response.BookingDetailDto;
@@ -39,7 +39,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Async
     public void sendBookingConfirmation(Payment payment, BookingDetailDto booking) {
-        log.info("? [NotificationService] Ti?n hnh x? l g?i email xc nh?n ??t phng bookingId={}", payment.getBookingId());
+        log.info("NotificationService sendBookingConfirmation bookingId={}", payment.getBookingId());
 
         String recipientEmail = (booking != null && booking.getContactEmail() != null)
                 ? booking.getContactEmail()
@@ -78,7 +78,7 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             htmlContent = templateEngine.process("email/booking-confirmation", context);
         } catch (Exception e) {
-            log.error("? L?i render template booking-confirmation: {}", e.getMessage());
+            log.error("Loi render template booking-confirmation: {}", e.getMessage());
             htmlContent = "<h3>Xac nhan dat phong thanh cong</h3>"
                     + "<p>Ma dat phong: " + bookingCode + "</p>"
                     + "<p>So tien: " + payment.getAmount() + " " + payment.getCurrency() + "</p>";
@@ -110,7 +110,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Async
     public void sendRefundNotification(Payment payment, BookingDetailDto booking, BigDecimal refundAmount, String reason) {
-        log.info("? [NotificationService] Ti?n hnh g?i email thng bo hon ti?n paymentId={}", payment.getId());
+        log.info("NotificationService sendRefundNotification paymentId={}", payment.getId());
 
         String recipientEmail = (booking != null && booking.getContactEmail() != null)
                 ? booking.getContactEmail()
@@ -140,7 +140,7 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             htmlContent = templateEngine.process("email/refund-confirmation", context);
         } catch (Exception e) {
-            log.error("? L?i render template refund-confirmation: {}", e.getMessage());
+            log.error("Loi render template refund-confirmation: {}", e.getMessage());
             htmlContent = "<h3>Thong bao hoan tien dat phong</h3>"
                     + "<p>Ma dat phong: " + bookingCode + "</p>"
                     + "<p>So tien hoan lai: " + refundAmount + " " + payment.getCurrency() + "</p>";

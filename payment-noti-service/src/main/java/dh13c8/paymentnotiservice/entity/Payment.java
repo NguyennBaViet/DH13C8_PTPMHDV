@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.entity;
+package dh13c8.paymentnotiservice.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

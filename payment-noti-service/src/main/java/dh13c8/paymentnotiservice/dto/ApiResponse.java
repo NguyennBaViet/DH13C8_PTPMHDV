@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.dto;
+package dh13c8.paymentnotiservice.dto;
 
 import lombok.*;
 

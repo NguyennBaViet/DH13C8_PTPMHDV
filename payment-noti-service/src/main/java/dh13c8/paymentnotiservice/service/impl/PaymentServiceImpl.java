@@ -1,4 +1,4 @@
-﻿package dh13c8.paymentnotiservice.service.impl;
+package dh13c8.paymentnotiservice.service.impl;
 
 import com.stripe.Stripe;
 import com.stripe.model.PaymentIntent;
