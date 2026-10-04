@@ -1,0 +1,22 @@
+# Log files
+*.log
+auth-err.log
+auth-run.log
+
+# Temp files
+database/tmp/
+
+# Maven build
+**/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
