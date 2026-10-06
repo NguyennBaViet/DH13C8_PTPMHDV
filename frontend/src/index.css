@@ -1,0 +1,60 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  :root {
+    --primary-50: #f9fafb;
+    --primary-100: #f3f4f6;
+    --primary-200: #e5e7eb;
+    --primary-300: #d1d5db;
+    --primary-400: #9ca3af;
+    --primary-500: #6b7280;
+    --primary-600: #4b5563;
+    --primary-700: #374151;
+    --primary-800: #1f2937;
+    --primary-900: #111827;
+    
+    --luxury-gold: #d4af37;
+    --luxury-darkGold: #b8860b;
+    --luxury-lightGold: #f0e68c;
+    
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2.5 bg-luxury-gold text-primary-900 font-semibold rounded-lg hover:bg-luxury-darkGold transition-all duration-300 hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-2.5 bg-primary-800 text-white font-semibold rounded-lg hover:bg-primary-900 transition-all duration-300 hover:shadow-lg;
+  }
+
+  .btn-danger {
+    @apply px-6 py-2.5 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all duration-300;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-primary-700 mb-2;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-2.5 border-2 border-primary-200 rounded-lg focus:border-luxury-gold focus:outline-none focus:ring-2 focus:ring-luxury-gold focus:ring-opacity-10 transition-all;
+  }
+
+  .card-luxury {
+    @apply bg-white rounded-lg border border-primary-200 shadow-md hover:shadow-lg hover:border-luxury-gold transition-all duration-300;
+  }
+
+  .section {
+    @apply max-w-7xl mx-auto px-4 py-16;
+  }
+
+  .section-title {
+    @apply text-center mb-12;
+  }
+}

@@ -1,0 +1,271 @@
+version: '3.8'
+
+services:
+  # ══════════════════════════════════════════════════════════════
+  # MySQL Database
+  # ══════════════════════════════════════════════════════════════
+  mysql:
+    image: mysql:8.0-alpine
+    container_name: khachsan-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - khachsan-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    environment:
+      MYSQL_TCP_PORT: 3306
+    restart: unless-stopped
+
+  # ══════════════════════════════════════════════════════════════
+  # Auth Service (Port 8021)
+  # ══════════════════════════════════════════════════════════════
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: khachsan-auth-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
+      LOGGING_LEVEL_DH13C8: ${LOG_LEVEL}
+    ports:
+      - "8021:8021"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ══════════════════════════════════════════════════════════════
+  # User Service (Port 8022)
+  # ══════════════════════════════════════════════════════════════
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: khachsan-user-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
+      LOGGING_LEVEL_DH13C8: ${LOG_LEVEL}
+    ports:
+      - "8022:8022"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8022/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ══════════════════════════════════════════════════════════════
+  # Hotel-Room Service (Port 8023)
+  # ══════════════════════════════════════════════════════════════
+  hotel-room-service:
+    build:
+      context: ./hotel-room-service
+      dockerfile: Dockerfile
+    container_name: khachsan-hotel-room-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
+      LOGGING_LEVEL_DH13C8: ${LOG_LEVEL}
+    ports:
+      - "8023:8023"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8023/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ══════════════════════════════════════════════════════════════
+  # Booking Service (Port 8024)
+  # ══════════════════════════════════════════════════════════════
+  booking-service:
+    build:
+      context: ./booking-service
+      dockerfile: Dockerfile
+    container_name: khachsan-booking-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      APP_HOTEL_ROOM_SERVICE_URL: ${HOTEL_ROOM_SERVICE_URL}
+      APP_PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
+      LOGGING_LEVEL_DH13C8: ${LOG_LEVEL}
+    ports:
+      - "8024:8024"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      hotel-room-service:
+        condition: service_healthy
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8024/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ══════════════════════════════════════════════════════════════
+  # Payment-Noti Service (Port 8025)
+  # ══════════════════════════════════════════════════════════════
+  payment-noti-service:
+    build:
+      context: ./payment-noti-service
+      dockerfile: Dockerfile
+    container_name: khachsan-payment-noti-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      APP_BOOKING_SERVICE_URL: ${BOOKING_SERVICE_URL}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      APP_MAIL_ALLOW_MOCK_FALLBACK: ${MAIL_ALLOW_MOCK_FALLBACK}
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_CURRENCY: ${STRIPE_CURRENCY}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
+      LOGGING_LEVEL_DH13C8: ${LOG_LEVEL}
+    ports:
+      - "8025:8025"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ══════════════════════════════════════════════════════════════
+  # API Gateway (Port 8020)
+  # ══════════════════════════════════════════════════════════════
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: khachsan-api-gateway
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      USER_SERVICE_URL: ${USER_SERVICE_URL}
+      HOTEL_ROOM_SERVICE_URL: ${HOTEL_ROOM_SERVICE_URL}
+      BOOKING_SERVICE_URL: ${BOOKING_SERVICE_URL}
+      PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL}
+      LOGGING_LEVEL_DH13C8: ${LOG_LEVEL}
+    ports:
+      - "8020:8020"
+    depends_on:
+      - auth-service
+      - user-service
+      - hotel-room-service
+      - booking-service
+      - payment-noti-service
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ══════════════════════════════════════════════════════════════
+  # Frontend (React + Vite) - Port 5173
+  # ══════════════════════════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: khachsan-frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api-gateway
+    networks:
+      - khachsan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ══════════════════════════════════════════════════════════════
+# Volumes - Persistent Data Storage
+# ══════════════════════════════════════════════════════════════
+volumes:
+  mysql_data:
+    driver: local
+
+# ══════════════════════════════════════════════════════════════
+# Networks - Service Communication
+# ══════════════════════════════════════════════════════════════
+networks:
+  khachsan-network:
+    driver: bridge

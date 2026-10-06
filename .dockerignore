@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+node_modules
+dist
+build
+target
+*.log
+.idea
+.vscode
+.DS_Store
+*.jar
+*.class

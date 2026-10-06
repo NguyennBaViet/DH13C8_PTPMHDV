@@ -1,0 +1,215 @@
+╔════════════════════════════════════════════════════════════════╗
+║        KHÁCH SẠN ONLINE - QUICK START GUIDE                   ║
+║              Hotel Booking Microservices v1.0                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+🚀 START IN 5 MINUTES
+
+1. CLONE PROJECT
+   git clone https://github.com/NguyennBaViet/DH13C8_PTPMHDV.git
+   cd DH13C8_PTPMHDV
+
+2. SETUP ENVIRONMENT
+   cp .env.example .env
+   (Edit .env if needed, defaults work for local testing)
+
+3. START DOCKER
+   docker-compose up -d
+
+4. WAIT 30-60 SECONDS
+   (Services are starting, databases initializing)
+
+5. ACCESS SERVICES
+   Frontend:    http://localhost:5173
+   API Gateway: http://localhost:8020
+   MySQL:       localhost:3306
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 ARCHITECTURE
+
+6 Backend Services (Java + Spring Boot):
+  ✓ Auth Service (8021)        - Login, registration, JWT
+  ✓ User Service (8022)        - User profiles, history
+  ✓ Hotel-Room Service (8023)  - Hotels, rooms, availability
+  ✓ Booking Service (8024)     - Booking management
+  ✓ Payment-Noti Service (8025)- Payments, notifications
+  ✓ API Gateway (8020)         - Routing, authentication
+
+1 Frontend (React):
+  ✓ React + Vite + TailwindCSS (5173)
+
+1 Database:
+  ✓ MySQL 8.0 (3306)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ TEST THE SYSTEM
+
+Run automated E2E tests:
+  Linux/Mac:  ./test/E2E_TEST_SCRIPT.sh
+  Windows:    .\test\E2E_TEST_SCRIPT.ps1
+
+Or test manually:
+  1. Open http://localhost:5173 in browser
+  2. Register new account
+  3. Login
+  4. Search hotels
+  5. Create booking
+  6. Process payment
+  7. Check notifications
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🛠️ COMMON COMMANDS
+
+Check status:
+  docker-compose ps
+
+View logs:
+  docker-compose logs -f
+
+Stop services:
+  docker-compose down
+
+Restart service:
+  docker-compose restart auth-service
+
+Database shell:
+  docker exec -it khachsan-mysql mysql -u root -p khachsan
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 DEFAULT CREDENTIALS (for testing)
+
+Database:
+  Username: khachsan
+  Password: khachsan
+  Database: khachsan
+
+API Access:
+  No default user - register first:
+    POST http://localhost:8020/api/auth/register
+    Body: {
+      "username": "testuser",
+      "email": "test@example.com",
+      "password": "TestPass123!",
+      "fullName": "Test User"
+    }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔗 SERVICE ENDPOINTS
+
+Public (No authentication):
+  GET  /api/auth/register          - Register user
+  POST /api/auth/login             - Login user
+  GET  /api/hotels                 - List all hotels
+  GET  /api/hotels/{id}            - Hotel details
+  GET  /api/hotels/{id}/rooms      - Hotel rooms
+
+Protected (Requires JWT token):
+  GET  /api/users/me               - User profile
+  GET  /api/bookings               - My bookings
+  POST /api/bookings               - Create booking
+  GET  /api/payments               - My payments
+  POST /api/payments               - Create payment
+  GET  /api/notifications/me       - My notifications
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 TEST FLOW WITH CURL
+
+1. Register:
+  curl -X POST http://localhost:8020/api/auth/register \
+    -H "Content-Type: application/json" \
+    -d '{
+      "username": "testuser",
+      "email": "test@example.com",
+      "password": "TestPass123!",
+      "fullName": "Test User"
+    }'
+
+2. Login:
+  curl -X POST http://localhost:8020/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{
+      "username": "testuser",
+      "password": "TestPass123!"
+    }'
+  (Copy accessToken value)
+
+3. Use token (replace TOKEN):
+  curl -X GET http://localhost:8020/api/users/me \
+    -H "Authorization: Bearer TOKEN"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🐛 TROUBLESHOOTING
+
+Services won't start:
+  1. docker-compose ps              (check status)
+  2. docker-compose logs            (view errors)
+  3. docker-compose down -v && docker-compose up -d
+  4. Check ports available (3306, 5173, 8020-8025)
+
+API returns 401:
+  • Token not sent in Authorization header
+  • Token expired (3600 seconds)
+  • Wrong JWT_SECRET in .env
+  • Token invalid/malformed
+
+Database won't connect:
+  • MySQL container not running: docker-compose logs mysql
+  • Wrong credentials in .env
+  • Database not initialized: wait 30 seconds and refresh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 FULL DOCUMENTATION
+
+Project Overview:    PROJECT_SUMMARY.txt
+Deployment Guide:    DEPLOYMENT_CHECKLIST.txt
+Docker Commands:     docker-commands.txt
+Testing Guide:       test/E2E_TESTING_GUIDE.md
+Frontend Setup:      frontend/SETUP_GUIDE.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ WHAT'S INCLUDED
+
+✓ 6 Production-ready Java microservices
+✓ React + Vite frontend with TailwindCSS
+✓ MySQL database with 14 tables
+✓ Docker containerization & Compose
+✓ Automated E2E testing suite
+✓ JWT authentication & security
+✓ Email notifications (Gmail SMTP)
+✓ Payment processing (mock + Stripe ready)
+✓ Complete API documentation
+✓ Deployment ready
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 NEXT STEPS
+
+1. Verify all services are running
+2. Run E2E tests to validate system
+3. Explore the API and frontend
+4. Customize .env for your needs
+5. Review code and architecture
+6. Plan next features/improvements
+7. Deploy to production when ready
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need Help?
+  1. Check PROJECT_SUMMARY.txt for architecture
+  2. Review docker-commands.txt for Docker help
+  3. See test/E2E_TESTING_GUIDE.md for testing
+  4. Check frontend/SETUP_GUIDE.md for frontend
+
+╔════════════════════════════════════════════════════════════════╗
+║                  🎉 READY TO USE!                             ║
+║              Start developing and deploying now               ║
+╚════════════════════════════════════════════════════════════════╝
