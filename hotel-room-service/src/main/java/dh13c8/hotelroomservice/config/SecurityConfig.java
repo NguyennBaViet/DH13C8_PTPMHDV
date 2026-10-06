@@ -26,6 +26,8 @@ public class SecurityConfig {
             .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Internal: booking-service gọi
+                .requestMatchers("/api/rooms/internal/**").permitAll()
                 // Public: xem khách sạn, phòng, tìm kiếm
                 .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/rooms/**").permitAll()
