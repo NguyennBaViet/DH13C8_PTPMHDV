@@ -32,6 +32,9 @@ export default function Header() {
           {user ? (
             <>
               <Link to="/my-bookings" className="hover:text-luxury-gold transition">Đặt Phòng</Link>
+              {user?.role === 'ADMIN' && (
+                <Link to="/admin" className="hover:text-luxury-gold transition font-semibold text-luxury-gold">⚙️ Admin</Link>
+              )}
               <div className="relative group">
                 <button className="flex items-center space-x-2 hover:text-luxury-gold transition">
                   <User size={20} />
@@ -100,6 +103,15 @@ export default function Header() {
               >
                 Đặt Phòng
               </Link>
+              {user?.role === 'ADMIN' && (
+                <Link
+                  to="/admin"
+                  className="block hover:text-luxury-gold transition font-semibold text-luxury-gold"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  ⚙️ Admin
+                </Link>
+              )}
               <Link
                 to="/profile"
                 className="block hover:text-luxury-gold transition"

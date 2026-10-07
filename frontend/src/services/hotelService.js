@@ -1,19 +1,26 @@
 import api from './api'
 
 const hotelService = {
-  // Get all hotels
-  getHotels: async (params = {}) => {
+  // Get all hotels with pagination
+  getHotels: async (page = 0, size = 10) => {
     try {
-      const response = await api.get('/hotels', { params })
-      return {
-        success: true,
-        data: response.data
-      }
+      const response = await api.get('/hotels', { params: { page, size } })
+      // Backend returns Page<HotelResponse>
+      return response.data?.content || []
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi lấy danh sách khách sạn'
-      }
+      console.error('Error fetching hotels:', error)
+      throw error
+    }
+  },
+
+  // Get all hotels (simplified - returns all without pagination)
+  getAllHotels: async () => {
+    try {
+      const response = await api.get('/hotels', { params: { page: 0, size: 1000 } })
+      return response.data?.content || []
+    } catch (error) {
+      console.error('Error fetching all hotels:', error)
+      throw error
     }
   },
 
@@ -21,81 +28,68 @@ const hotelService = {
   getHotelById: async (hotelId) => {
     try {
       const response = await api.get(`/hotels/${hotelId}`)
-      return {
-        success: true,
-        data: response.data
-      }
+      return response.data
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi lấy thông tin khách sạn'
-      }
+      console.error('Error fetching hotel:', error)
+      throw error
     }
   },
 
-  // Search hotels
-  searchHotels: async (criteria) => {
+  // Search hotels with filters
+  searchHotels: async (city, minStar, maxStar, page = 0, size = 10) => {
     try {
-      const response = await api.get('/hotels/search', { params: criteria })
-      return {
-        success: true,
-        data: response.data
-      }
+      const response = await api.get('/hotels/search', {
+        params: { city, minStar, maxStar, page, size }
+      })
+      // Backend returns Page<HotelResponse>
+      return response.data?.content || []
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi tìm kiếm khách sạn'
-      }
+      console.error('Error searching hotels:', error)
+      throw error
     }
   },
 
-  // Get rooms by hotel
+  // Get rooms by hotel (calls room service instead)
   getRoomsByHotel: async (hotelId) => {
     try {
-      const response = await api.get(`/hotels/${hotelId}/rooms`)
-      return {
-        success: true,
-        data: response.data
-      }
+      const response = await api.get(`/rooms/hotel/${hotelId}`)
+      return response.data || []
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi lấy danh sách phòng'
-      }
+      console.error('Error fetching rooms by hotel:', error)
+      throw error
     }
   },
 
-  // Get room by ID
-  getRoomById: async (roomId) => {
+  // Create hotel
+  createHotel: async (hotelData) => {
     try {
-      const response = await api.get(`/rooms/${roomId}`)
-      return {
-        success: true,
-        data: response.data
-      }
+      const response = await api.post('/hotels', hotelData)
+      return response.data
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi lấy thông tin phòng'
-      }
+      console.error('Error creating hotel:', error)
+      throw error
     }
   },
 
-  // Check room availability
-  checkAvailability: async (roomId, checkIn, checkOut) => {
+  // Update hotel
+  updateHotel: async (hotelId, hotelData) => {
     try {
-      const response = await api.get(`/rooms/${roomId}/availability`, {
-        params: { checkIn, checkOut }
-      })
-      return {
-        success: true,
-        data: response.data
-      }
+      const response = await api.put(`/hotels/${hotelId}`, hotelData)
+      return response.data
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi kiểm tra tình trạng phòng'
-      }
+      console.error('Error updating hotel:', error)
+      throw error
+    }
+  },
+
+  // Delete hotel
+  deleteHotel: async (hotelId) => {
+    try {
+      await api.delete(`/hotels/${hotelId}`)
+      return true
+    } catch (error) {
+      console.error('Error deleting hotel:', error)
+      throw error
     }
   }
 }

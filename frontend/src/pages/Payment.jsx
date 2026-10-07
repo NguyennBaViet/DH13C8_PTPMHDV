@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { CreditCard, DollarSign, CheckCircle } from 'lucide-react'
 
 export default function Payment() {
   const { bookingId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const bookingData = location.state || {}
+  
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -15,7 +18,10 @@ export default function Payment() {
     cardCVC: ''
   })
 
-  const totalPrice = 7500000
+  const checkIn = bookingData.checkIn || ''
+  const checkOut = bookingData.checkOut || ''
+  const nights = bookingData.nights || 0
+  const totalPrice = bookingData.totalPrice || 7500000
 
   const handleChange = (e) => {
     setFormData({
@@ -211,13 +217,18 @@ export default function Payment() {
 
               <div className="bg-primary-50 rounded-lg p-4 mb-6">
                 <h3 className="font-bold text-primary-900 mb-1">Mois Luxury Suite</h3>
-                <p className="text-sm text-primary-600">Phòng Đôi · 20-23/12/2024</p>
+                <p className="text-sm text-primary-600">
+                  Phòng Đôi · {checkIn && checkOut 
+                    ? `${new Date(checkIn).toLocaleDateString('vi-VN')} - ${new Date(checkOut).toLocaleDateString('vi-VN')}`
+                    : 'N/A'
+                  }
+                </p>
               </div>
 
               <div className="space-y-3 mb-6 pb-6 border-b">
                 <div className="flex justify-between">
-                  <span className="text-primary-600">Giá phòng (3 đêm)</span>
-                  <span className="font-semibold">7.5M</span>
+                  <span className="text-primary-600">Giá phòng ({nights} đêm)</span>
+                  <span className="font-semibold">{nights > 0 ? `${(totalPrice / 1000000).toFixed(1)}M` : '0M'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-primary-600">Thuế & Phí</span>
@@ -227,7 +238,7 @@ export default function Payment() {
 
               <div className="flex justify-between mb-6">
                 <span className="font-bold text-lg">Tổng Cộng</span>
-                <span className="text-2xl font-bold text-luxury-gold">7.5M</span>
+                <span className="text-2xl font-bold text-luxury-gold">{nights > 0 ? `${(totalPrice / 1000000).toFixed(1)}M` : '0M'}</span>
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">

@@ -29,5 +29,7 @@ public class RoomRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Giá phòng phải lớn hơn 0")
     private BigDecimal pricePerNight;
 
+    private String image;  // Base64 hoặc URL
+
     private Set<Long> amenityIds;
 }

@@ -1,46 +1,11 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, Trash2, Eye } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 export default function MyBookings() {
-  const [bookings, setBookings] = useState([
-    {
-      id: 'BK001',
-      hotelName: 'Mois Luxury Suite',
-      city: 'Hồ Chí Minh',
-      checkIn: '2024-12-20',
-      checkOut: '2024-12-23',
-      guests: 2,
-      roomType: 'Phòng Đôi',
-      price: 7500000,
-      status: 'Confirmed',
-      bookingDate: '2024-11-15'
-    },
-    {
-      id: 'BK002',
-      hotelName: 'Mois Premium Plaza',
-      city: 'Hà Nội',
-      checkIn: '2024-12-28',
-      checkOut: '2024-12-30',
-      guests: 1,
-      roomType: 'Phòng Đơn',
-      price: 3000000,
-      status: 'Pending',
-      bookingDate: '2024-11-10'
-    },
-    {
-      id: 'BK003',
-      hotelName: 'Mois Ocean View',
-      city: 'Đà Nẵng',
-      checkIn: '2024-11-05',
-      checkOut: '2024-11-07',
-      guests: 3,
-      roomType: 'Suite Hạng Sang',
-      price: 10000000,
-      status: 'Completed',
-      bookingDate: '2024-10-20'
-    }
-  ])
+  const { user } = useAuth()
+  const [bookings, setBookings] = useState([])
 
   const handleCancel = (bookingId) => {
     if (confirm('Bạn có chắc muốn hủy đặt phòng này?')) {
@@ -83,7 +48,14 @@ export default function MyBookings() {
       <div className="max-w-6xl mx-auto px-4">
         <h1 className="text-4xl font-bold text-primary-900 mb-8">Đơn Đặt Phòng Của Tôi</h1>
 
-        {bookings.length === 0 ? (
+        {!user ? (
+          <div className="card-luxury p-12 text-center">
+            <p className="text-lg text-primary-600 mb-6">Vui lòng đăng nhập để xem đơn đặt phòng của bạn</p>
+            <Link to="/login" className="btn-primary inline-block">
+              Đăng Nhập
+            </Link>
+          </div>
+        ) : bookings.length === 0 ? (
           <div className="card-luxury p-12 text-center">
             <p className="text-lg text-primary-600 mb-6">Bạn chưa có đơn đặt phòng nào</p>
             <Link to="/hotels" className="btn-primary inline-block">

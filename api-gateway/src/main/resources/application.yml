@@ -10,51 +10,65 @@ spring:
     gateway:
       # ── CORS toàn gateway ─────────────────────────────────
       globalcors:
-        corsConfigurations:
+        cors-configurations:
           '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
-            allowedHeaders: "*"
-            allowCredentials: true
+            allowed-origin-patterns: "*"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
 
       # ── Routes ────────────────────────────────────────────
       routes:
 
         # Auth Service – public, không cần AuthFilter
         - id: auth-service
-          uri: http://localhost:8021
+          uri: http://127.0.0.1:8021
           predicates:
             - Path=/api/auth/**
+          filters:
+            - RewritePath=/api/auth/(?<segment>.*), /$\{segment}
 
         # User Service – yêu cầu JWT
         - id: user-service
-          uri: http://localhost:8022
+          uri: http://127.0.0.1:8022
           predicates:
             - Path=/api/users/**,/api/reviews/**
           filters:
             - AuthFilter
+            - PreserveHostHeader
 
         # Hotel-Room Service – GET public, POST/PUT/DELETE cần JWT (xử lý trong service)
         - id: hotel-room-service
-          uri: http://localhost:8023
+          uri: http://127.0.0.1:8023
           predicates:
             - Path=/api/hotels/**,/api/rooms/**,/api/amenities/**
+          filters:
+            - PreserveHostHeader
 
         # Booking Service – yêu cầu JWT
         - id: booking-service
-          uri: http://localhost:8024
+          uri: http://127.0.0.1:8024
           predicates:
             - Path=/api/bookings/**
           filters:
             - AuthFilter
+            - PreserveHostHeader
 
         # Payment-Noti Service – yêu cầu JWT
         - id: payment-noti-service
-          uri: http://localhost:8025
+          uri: http://127.0.0.1:8025
           predicates:
             - Path=/api/payments/**,/api/notifications/**
           filters:
             - AuthFilter
+            - PreserveHostHeader
 
 server:
   port: 8020
@@ -72,5 +86,6 @@ spring.cloud.inetutils.preferred-networks: "127.0.0"
 logging:
   level:
     dh13c8: DEBUG
-    org.springframework.cloud.gateway: INFO
-    reactor.netty: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: DEBUG
+    reactor.netty: DEBUG

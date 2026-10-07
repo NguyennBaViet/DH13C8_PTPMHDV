@@ -1,0 +1,18 @@
+{
+  "name": "khachsan-hotel-booking",
+  "version": "1.0.0",
+  "description": "Mois Hotel Booking Microservices System",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "lint": "cd frontend && npm run lint",
+    "install-all": "npm install && cd frontend && npm install",
+    "start-services": "echo 'Start all Java services in IntelliJ or run individual services'",
+    "start-mysql": "echo 'Start MySQL server on localhost:3306'"
+  },
+  "keywords": ["hotel", "booking", "microservices"],
+  "author": "DH13C8 Team",
+  "license": "MIT"
+}

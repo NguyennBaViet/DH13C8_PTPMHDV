@@ -35,13 +35,14 @@ public class SecurityConfig {
                 // Nội bộ: lock/unlock phòng (Booking Service gọi)
                 .requestMatchers("/api/rooms/*/availability/lock").authenticated()
                 .requestMatchers("/api/rooms/*/availability/unlock").authenticated()
-                // Quản trị: STAFF và ADMIN
+                // Quản trị: Hotels - STAFF và ADMIN
                 .requestMatchers(HttpMethod.POST,   "/api/hotels/**").hasAnyRole("STAFF","ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/hotels/**").hasAnyRole("STAFF","ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/hotels/**").hasAnyRole("STAFF","ADMIN")
-                .requestMatchers(HttpMethod.POST,   "/api/rooms/**").hasAnyRole("STAFF","ADMIN")
-                .requestMatchers(HttpMethod.PUT,    "/api/rooms/**").hasAnyRole("STAFF","ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/rooms/**").hasAnyRole("STAFF","ADMIN")
+                // Quản trị: Rooms - chỉ yêu cầu authenticated (bất kỳ role nào đã đăng nhập)
+                .requestMatchers(HttpMethod.POST,   "/api/rooms/**").authenticated()
+                .requestMatchers(HttpMethod.PUT,    "/api/rooms/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/rooms/**").authenticated()
                 .anyRequest().permitAll()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

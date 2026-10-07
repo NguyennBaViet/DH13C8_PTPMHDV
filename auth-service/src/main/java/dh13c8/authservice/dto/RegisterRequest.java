@@ -22,6 +22,7 @@ public class RegisterRequest {
     @Size(max = 100, message = "Họ tên tối đa 100 ký tự")
     private String fullName;
 
-    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không hợp lệ")
+    // Phone is optional - only validate if provided
+    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$|^$", message = "Số điện thoại không hợp lệ")
     private String phone;
 }

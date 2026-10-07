@@ -17,6 +17,7 @@ public class RoomResponse {
     private Integer     floor;
     private Integer     capacity;
     private BigDecimal  pricePerNight;
+    private String      image;
     private boolean     isActive;
     private List<AmenityResponse> amenities;
     private LocalDateTime createdAt;

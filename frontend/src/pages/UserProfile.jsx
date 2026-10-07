@@ -4,18 +4,18 @@ import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 
 export default function UserProfile() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
   const [editMode, setEditMode] = useState(false)
 
   const [profileData, setProfileData] = useState({
-    fullName: 'Nguyễn Văn A',
-    email: 'nguyenvana@example.com',
-    phone: '+84 909 123 456',
-    address: '123 Nguyễn Huệ, Quận 1, Hồ Chí Minh',
-    dateOfBirth: '1990-01-15',
-    gender: 'Nam',
+    fullName: user?.fullName || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+    dateOfBirth: user?.dateOfBirth || '',
+    gender: user?.gender || 'Nam',
     avatar: '👤'
   })
 

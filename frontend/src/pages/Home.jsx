@@ -1,11 +1,21 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Star, MapPin, Calendar, Users } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Home() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [checkIn, setCheckIn] = React.useState('')
   const [checkOut, setCheckOut] = React.useState('')
   const [guests, setGuests] = React.useState(1)
+
+  // Auto-redirect admin users to admin dashboard
+  React.useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      navigate('/admin')
+    }
+  }, [user, navigate])
 
   const handleSearch = (e) => {
     e.preventDefault()

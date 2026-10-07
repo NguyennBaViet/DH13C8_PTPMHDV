@@ -40,6 +40,9 @@ public class Room {
     @Column(name = "price_per_night", nullable = false, precision = 12, scale = 2)
     private BigDecimal pricePerNight;
 
+    @Column(columnDefinition = "LONGTEXT")
+    private String image;  // Base64 hoặc URL
+
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 

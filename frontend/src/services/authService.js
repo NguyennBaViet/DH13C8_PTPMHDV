@@ -5,13 +5,14 @@ const authService = {
   login: async (username, password) => {
     try {
       const response = await api.post('/auth/login', {
-        username,
+        usernameOrEmail: username,
         password
       })
       
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token)
-        localStorage.setItem('user', JSON.stringify(response.data.user))
+      if (response.data.accessToken) {
+        localStorage.setItem('authToken', response.data.accessToken)
+        localStorage.setItem('refreshToken', response.data.refreshToken)
+        localStorage.setItem('user', JSON.stringify(response.data))
       }
       
       return {
@@ -45,6 +46,7 @@ const authService = {
   // Logout
   logout: () => {
     localStorage.removeItem('authToken')
+    localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
   },
 
@@ -57,9 +59,16 @@ const authService = {
   // Refresh token
   refreshToken: async () => {
     try {
-      const response = await api.post('/auth/refresh-token')
-      if (response.data.token) {
-        localStorage.setItem('authToken', response.data.token)
+      const refreshToken = localStorage.getItem('refreshToken')
+      if (!refreshToken) {
+        throw new Error('No refresh token found')
+      }
+      const response = await api.post('/auth/refresh', {
+        refreshToken: refreshToken
+      })
+      if (response.data.accessToken) {
+        localStorage.setItem('authToken', response.data.accessToken)
+        localStorage.setItem('refreshToken', response.data.refreshToken)
       }
       return {
         success: true,

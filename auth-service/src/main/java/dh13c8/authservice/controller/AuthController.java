@@ -12,14 +12,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
     /**
-     * POST /api/auth/register
+     * POST /register
      * Đăng ký tài khoản mới (mặc định role = GUEST)
      */
     @PostMapping("/register")
@@ -29,7 +29,7 @@ public class AuthController {
     }
 
     /**
-     * POST /api/auth/login
+     * POST /login
      * Đăng nhập, nhận access + refresh token
      */
     @PostMapping("/login")
@@ -38,7 +38,7 @@ public class AuthController {
     }
 
     /**
-     * POST /api/auth/refresh
+     * POST /refresh
      * Lấy access token mới bằng refresh token
      */
     @PostMapping("/refresh")
@@ -47,7 +47,7 @@ public class AuthController {
     }
 
     /**
-     * POST /api/auth/logout
+     * POST /logout
      * Đăng xuất – thu hồi toàn bộ refresh token
      */
     @PostMapping("/logout")
@@ -58,7 +58,7 @@ public class AuthController {
     }
 
     /**
-     * GET /api/auth/validate?token=...
+     * GET /validate?token=...
      * Dùng bởi API Gateway để validate JWT nội bộ
      */
     @GetMapping("/validate")
@@ -67,7 +67,7 @@ public class AuthController {
     }
 
     /**
-     * GET /api/auth/me
+     * GET /me
      * Lấy thông tin người dùng hiện tại
      */
     @GetMapping("/me")
