@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import { Star, MapPin, AlertCircle, Building2 } from 'lucide-react'
 import hotelService from '../services/hotelService'
 
 export default function HotelSearch() {
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -133,7 +134,7 @@ export default function HotelSearch() {
                 {filteredHotels.map((hotel) => (
                   <Link
                     key={hotel.id}
-                    to={`/hotels/${hotel.id}`}
+                    to={`/hotels/${hotel.id}${location.search || ''}`}
                     className="card-luxury overflow-hidden hover:shadow-luxury-lg cursor-pointer transition flex flex-col sm:flex-row group"
                   >
                     <div className="h-48 sm:h-auto sm:w-56 bg-primary-200 flex-shrink-0 relative overflow-hidden">

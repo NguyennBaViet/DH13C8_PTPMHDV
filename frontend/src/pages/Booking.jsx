@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom'
-import { MapPin, AlertCircle, Calendar, User, Mail, Phone, FileText, ArrowLeft, BedDouble } from 'lucide-react'
+import { MapPin, AlertCircle, CheckCircle, Calendar, User, Mail, Phone, FileText, ArrowLeft, BedDouble } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import roomService from '../services/roomService'
 
@@ -13,6 +13,9 @@ export default function Booking() {
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const [bookedDates, setBookedDates] = useState([])
+  const [availabilityStatus, setAvailabilityStatus] = useState({ checking: false, available: null, message: '' })
 
   const [formData, setFormData] = useState({
     checkIn: location.state?.checkIn || '',
@@ -79,6 +82,79 @@ export default function Booking() {
     }
   }, [roomId])
 
+  const todayStr = new Date().toISOString().split('T')[0]
+
+  // Lấy lịch các ngày đã kín chỗ trong 60 ngày tới
+  useEffect(() => {
+    if (!roomId) return
+    const nextTwoMonths = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    
+    roomService.getAvailabilityCalendar(roomId, todayStr, nextTwoMonths)
+      .then(data => {
+        if (data && typeof data === 'object') {
+          const booked = Object.entries(data)
+            .filter(([_, status]) => status === 'BOOKED' || status === 'LOCKED')
+            .map(([date]) => date)
+            .sort()
+          setBookedDates(booked)
+        }
+      })
+      .catch(err => console.warn('Lỗi tải lịch đặt phòng:', err))
+  }, [roomId, todayStr])
+
+  // Kiểm tra thời gian thực xem ngày chọn có bị trùng lịch đã đặt không
+  useEffect(() => {
+    if (!roomId || !formData.checkIn || !formData.checkOut) {
+      setAvailabilityStatus({ checking: false, available: null, message: '' })
+      return
+    }
+
+    if (new Date(formData.checkIn) >= new Date(formData.checkOut)) {
+      setAvailabilityStatus({
+        checking: false,
+        available: false,
+        message: 'Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 đêm'
+      })
+      return
+    }
+
+    let isCurrent = true
+    setAvailabilityStatus(prev => ({ ...prev, checking: true }))
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await roomService.checkAvailability(roomId, formData.checkIn, formData.checkOut)
+        if (!isCurrent) return
+        if (res && res.available) {
+          setAvailabilityStatus({
+            checking: false,
+            available: true,
+            message: 'Phòng hoàn toàn trống và sẵn sàng đặt trong khoảng ngày này.'
+          })
+          setError(null)
+        } else {
+          setAvailabilityStatus({
+            checking: false,
+            available: false,
+            message: `Phòng đã có khách đặt trong khoảng ngày từ ${new Date(formData.checkIn).toLocaleDateString('vi-VN')} đến ${new Date(formData.checkOut).toLocaleDateString('vi-VN')}. Vui lòng chọn ngày khác!`
+          })
+        }
+      } catch (err) {
+        if (!isCurrent) return
+        setAvailabilityStatus({
+          checking: false,
+          available: false,
+          message: 'Không thể kiểm tra tình trạng phòng: ' + (err.response?.data?.message || err.message)
+        })
+      }
+    }, 250)
+
+    return () => {
+      isCurrent = false
+      clearTimeout(timer)
+    }
+  }, [roomId, formData.checkIn, formData.checkOut])
+
   const roomPrice = room?.pricePerNight || 0
 
   const calculateNights = () => {
@@ -124,6 +200,11 @@ export default function Booking() {
 
     if (new Date(formData.checkIn) >= new Date(formData.checkOut)) {
       setError('Ngày trả phòng phải sau ngày nhận phòng')
+      return
+    }
+
+    if (availabilityStatus.available === false) {
+      setError(availabilityStatus.message || 'Phòng đã có khách đặt trong khoảng thời gian này. Vui lòng chọn khoảng ngày khác!')
       return
     }
 
@@ -216,35 +297,81 @@ export default function Booking() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label flex items-center space-x-1">
-                      <Calendar size={16} className="text-luxury-gold" />
-                      <span>Ngày Nhận Phòng</span>
-                    </label>
-                    <input
-                      type="date"
-                      name="checkIn"
-                      value={formData.checkIn}
-                      onChange={handleChange}
-                      className="form-input"
-                      required
-                    />
+                <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="form-label flex items-center space-x-1">
+                        <Calendar size={16} className="text-luxury-gold" />
+                        <span>Ngày Nhận Phòng</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="checkIn"
+                        min={todayStr}
+                        value={formData.checkIn}
+                        onChange={handleChange}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label flex items-center space-x-1">
+                        <Calendar size={16} className="text-luxury-gold" />
+                        <span>Ngày Trả Phòng</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="checkOut"
+                        min={formData.checkIn || todayStr}
+                        value={formData.checkOut}
+                        onChange={handleChange}
+                        className="form-input"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="form-label flex items-center space-x-1">
-                      <Calendar size={16} className="text-luxury-gold" />
-                      <span>Ngày Trả Phòng</span>
-                    </label>
-                    <input
-                      type="date"
-                      name="checkOut"
-                      value={formData.checkOut}
-                      onChange={handleChange}
-                      className="form-input"
-                      required
-                    />
-                  </div>
+
+                  {/* Hiển thị phản hồi kiểm tra phòng trống theo thời gian thực */}
+                  {availabilityStatus.checking && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-lg flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-blue-700"></div>
+                      <span>Đang kiểm tra phòng trống trong khoảng ngày đã chọn...</span>
+                    </div>
+                  )}
+
+                  {!availabilityStatus.checking && availabilityStatus.available === false && (
+                    <div className="mt-3 p-3.5 bg-red-50 border border-red-300 text-red-700 text-sm rounded-lg flex items-start gap-2.5 shadow-sm">
+                      <AlertCircle size={20} className="flex-shrink-0 text-red-600 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-red-800">Không thể đặt phòng vào thời gian này!</p>
+                        <p className="text-xs text-red-700 mt-0.5">{availabilityStatus.message}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!availabilityStatus.checking && availabilityStatus.available === true && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-lg flex items-center gap-2">
+                      <CheckCircle size={16} className="flex-shrink-0 text-green-600" />
+                      <span className="font-medium">{availabilityStatus.message}</span>
+                    </div>
+                  )}
+
+                  {/* Hiển thị các ngày đã kín chỗ nếu có */}
+                  {bookedDates.length > 0 && (
+                    <div className="mt-3 p-3 bg-amber-50/80 border border-amber-200 rounded-lg text-xs">
+                      <p className="font-semibold text-amber-900 mb-1 flex items-center gap-1.5">
+                        <Calendar size={14} className="text-amber-700" />
+                        <span>Các ngày phòng này đã kín chỗ (không thể đặt trùng):</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mt-1 max-h-24 overflow-y-auto">
+                        {bookedDates.map(d => (
+                          <span key={d} className="px-2 py-0.5 bg-red-100 text-red-700 font-medium rounded text-[11px] border border-red-200">
+                            {new Date(d + 'T00:00:00').toLocaleDateString('vi-VN')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -339,9 +466,15 @@ export default function Booking() {
                 <button
                   type="submit"
                   className="btn-primary w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!room || loading || !isRoomActive}
+                  disabled={!room || loading || !isRoomActive || availabilityStatus.available === false || availabilityStatus.checking}
                 >
-                  {isRoomActive ? 'Tiếp Tục Thanh Toán' : 'Phòng Tạm Ngưng Phục Vụ'}
+                  {!isRoomActive 
+                    ? 'Phòng Tạm Ngưng Phục Vụ' 
+                    : availabilityStatus.checking 
+                    ? 'Đang Kiểm Tra Phòng Trống...' 
+                    : availabilityStatus.available === false 
+                    ? 'Phòng Đã Kín Chỗ - Chọn Ngày Khác' 
+                    : 'Tiếp Tục Thanh Toán'}
                 </button>
               </form>
             </div>

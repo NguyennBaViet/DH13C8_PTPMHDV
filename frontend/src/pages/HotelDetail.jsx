@@ -1,16 +1,29 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Star, MapPin, Wifi, UtensilsCrossed, Zap, Users, AlertCircle, ArrowLeft, BedDouble } from 'lucide-react'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { Star, MapPin, Calendar, Users, AlertCircle, ArrowLeft, BedDouble, CheckCircle } from 'lucide-react'
 import hotelService from '../services/hotelService'
 import roomService from '../services/roomService'
 
 export default function HotelDetail() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const [hotel, setHotel] = useState(null)
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const todayStr = new Date().toISOString().split('T')[0]
+  const tomorrowStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+  const [selectedDates, setSelectedDates] = useState({
+    checkIn: searchParams.get('checkIn') || '',
+    checkOut: searchParams.get('checkOut') || ''
+  })
+  const [unavailableRoomIds, setUnavailableRoomIds] = useState(new Set())
+  const [todayOccupiedRoomIds, setTodayOccupiedRoomIds] = useState(new Set())
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+
+  // 1. Tải thông tin khách sạn và danh sách phòng
   useEffect(() => {
     let isMounted = true
 
@@ -20,7 +33,7 @@ export default function HotelDetail() {
         setLoading(true)
         setError(null)
 
-        const [hotelData, roomsData] = await Promise.all([
+        const [hotelData, roomsData, availableToday] = await Promise.all([
           hotelService.getHotelById(id).catch(err => {
             console.warn('Lỗi tải khách sạn:', err)
             return null
@@ -28,7 +41,8 @@ export default function HotelDetail() {
           roomService.getRoomsByHotelId(id).catch(err => {
             console.warn('Lỗi tải phòng theo khách sạn:', err)
             return []
-          })
+          }),
+          roomService.searchRooms({ hotelId: id, checkInDate: todayStr, checkOutDate: tomorrowStr, page: 0, size: 100 }).catch(() => [])
         ])
 
         if (isMounted) {
@@ -37,7 +51,13 @@ export default function HotelDetail() {
           } else {
             setError('Không tìm thấy thông tin khách sạn này.')
           }
-          setRooms(roomsData || [])
+          const roomList = roomsData || []
+          setRooms(roomList)
+
+          // Xác định các phòng đang có khách hôm nay
+          const availTodayIds = new Set((availableToday || []).map(r => r.id))
+          const occupiedToday = new Set(roomList.filter(r => (r.active ?? r.isActive ?? true) && !availTodayIds.has(r.id)).map(r => r.id))
+          setTodayOccupiedRoomIds(occupiedToday)
         }
       } catch (err) {
         console.error('Lỗi tải chi tiết khách sạn:', err)
@@ -56,7 +76,46 @@ export default function HotelDetail() {
     return () => {
       isMounted = false
     }
-  }, [id])
+  }, [id, todayStr, tomorrowStr])
+
+  // 2. Kiểm tra tình trạng phòng theo ngày lưu trú được chọn
+  useEffect(() => {
+    if (!id || !selectedDates.checkIn || !selectedDates.checkOut) {
+      setUnavailableRoomIds(new Set())
+      return
+    }
+
+    if (new Date(selectedDates.checkIn) >= new Date(selectedDates.checkOut)) {
+      return
+    }
+
+    let isCurrent = true
+    setCheckingAvailability(true)
+
+    roomService.searchRooms({
+      hotelId: id,
+      checkInDate: selectedDates.checkIn,
+      checkOutDate: selectedDates.checkOut,
+      page: 0,
+      size: 100
+    })
+      .then(availableRooms => {
+        if (!isCurrent) return
+        const availableIds = new Set((availableRooms || []).map(r => r.id))
+        const bookedIds = new Set(rooms.filter(r => !availableIds.has(r.id)).map(r => r.id))
+        setUnavailableRoomIds(bookedIds)
+      })
+      .catch(err => {
+        console.warn('Lỗi kiểm tra phòng theo ngày:', err)
+      })
+      .finally(() => {
+        if (isCurrent) setCheckingAvailability(false)
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [id, selectedDates.checkIn, selectedDates.checkOut, rooms])
 
   if (loading) {
     return (
@@ -86,6 +145,8 @@ export default function HotelDetail() {
       </div>
     )
   }
+
+  const hasSelectedDates = selectedDates.checkIn && selectedDates.checkOut && (new Date(selectedDates.checkIn) < new Date(selectedDates.checkOut))
 
   return (
     <div className="min-h-screen bg-primary-50">
@@ -144,6 +205,55 @@ export default function HotelDetail() {
               </div>
             )}
 
+            {/* Bộ Lọc Ngày Lưu Trú */}
+            <div className="card-luxury p-5 mb-8 border-2 border-luxury-gold/30 bg-gradient-to-r from-amber-50/50 to-white">
+              <h3 className="text-base font-bold text-primary-900 mb-3 flex items-center gap-2">
+                <Calendar size={18} className="text-luxury-gold" />
+                <span>Chọn ngày lưu trú để kiểm tra phòng trống:</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-primary-700 mb-1">Ngày Nhận Phòng</label>
+                  <input
+                    type="date"
+                    min={todayStr}
+                    value={selectedDates.checkIn}
+                    onChange={(e) => setSelectedDates(prev => ({ ...prev, checkIn: e.target.value }))}
+                    className="form-input text-sm w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-primary-700 mb-1">Ngày Trả Phòng</label>
+                  <input
+                    type="date"
+                    min={selectedDates.checkIn || todayStr}
+                    value={selectedDates.checkOut}
+                    onChange={(e) => setSelectedDates(prev => ({ ...prev, checkOut: e.target.value }))}
+                    className="form-input text-sm w-full"
+                  />
+                </div>
+              </div>
+              {hasSelectedDates && (
+                <div className="mt-3 flex items-center justify-between text-xs text-primary-600 pt-2 border-t border-primary-100">
+                  <span>
+                    Khoảng thời gian:{' '}
+                    <strong>{new Date(selectedDates.checkIn).toLocaleDateString('vi-VN')}</strong> →{' '}
+                    <strong>{new Date(selectedDates.checkOut).toLocaleDateString('vi-VN')}</strong>
+                  </span>
+                  {checkingAvailability ? (
+                    <span className="text-blue-600 animate-pulse">Đang kiểm tra phòng...</span>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedDates({ checkIn: '', checkOut: '' })}
+                      className="text-red-600 hover:underline font-medium"
+                    >
+                      Xóa ngày chọn
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Rooms */}
             <div className="card-luxury p-6">
               <div className="flex justify-between items-center mb-6">
@@ -160,14 +270,18 @@ export default function HotelDetail() {
                 <div className="space-y-6">
                   {rooms.map((room) => {
                     const isRoomActive = room.isActive !== undefined ? room.isActive : (room.active !== undefined ? room.active : true)
+                    const isBookedForDates = hasSelectedDates && unavailableRoomIds.has(room.id)
+                    const isOccupiedToday = !hasSelectedDates && todayOccupiedRoomIds.has(room.id)
 
                     return (
                       <div 
                         key={room.id} 
                         className={`border rounded-xl p-6 transition ${
-                          isRoomActive 
-                            ? 'border-primary-200 hover:shadow-luxury hover:bg-primary-50/50' 
-                            : 'border-gray-200 bg-gray-50 opacity-75'
+                          !isRoomActive 
+                            ? 'border-gray-200 bg-gray-50 opacity-75'
+                            : isBookedForDates
+                            ? 'border-red-200 bg-red-50/30'
+                            : 'border-primary-200 hover:shadow-luxury hover:bg-primary-50/50'
                         }`}
                       >
                         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
@@ -184,17 +298,25 @@ export default function HotelDetail() {
                               </div>
                             )}
                             <div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-xl font-bold text-primary-900">
                                   Phòng {room.roomNumber} - {room.roomType}
                                 </h3>
-                                {isRoomActive ? (
-                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">
-                                    Hoạt động
+                                {!isRoomActive ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-300">
+                                    Tạm ngưng phục vụ
+                                  </span>
+                                ) : isBookedForDates ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300">
+                                    Đã kín chỗ ngày này
+                                  </span>
+                                ) : isOccupiedToday ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                                    Đang có khách hôm nay
                                   </span>
                                 ) : (
-                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300">
-                                    Tạm ngưng phục vụ
+                                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">
+                                    Còn phòng trống
                                   </span>
                                 )}
                               </div>
@@ -230,22 +352,43 @@ export default function HotelDetail() {
                           </div>
                         )}
 
-                        <div className="pt-2 border-t border-primary-100 flex justify-end">
-                          {isRoomActive ? (
-                            <Link
-                              to={`/booking/${room.id}`}
-                              className="btn-primary inline-flex items-center space-x-2 px-6 py-2.5"
-                            >
-                              <span>Đặt Phòng Ngay</span>
-                            </Link>
-                          ) : (
-                            <button
-                              disabled
-                              className="px-6 py-2.5 bg-gray-200 text-gray-500 rounded-lg text-sm font-semibold cursor-not-allowed"
-                            >
-                              Phòng Đang Bảo Trì
-                            </button>
-                          )}
+                        <div className="pt-2 border-t border-primary-100 flex items-center justify-between">
+                          <span className="text-xs text-primary-500">
+                            {isBookedForDates
+                              ? '⚠️ Đã có người đặt trong thời gian bạn chọn'
+                              : isOccupiedToday
+                              ? 'ℹ️ Đang có khách hôm nay, có thể đặt trước các ngày tới'
+                              : '✓ Sẵn sàng nhận khách'}
+                          </span>
+
+                          <div>
+                            {!isRoomActive ? (
+                              <button
+                                disabled
+                                className="px-6 py-2.5 bg-gray-200 text-gray-500 rounded-lg text-sm font-semibold cursor-not-allowed"
+                              >
+                                Phòng Đang Bảo Trì
+                              </button>
+                            ) : isBookedForDates ? (
+                              <button
+                                disabled
+                                className="px-6 py-2.5 bg-red-100 text-red-600 rounded-lg text-sm font-semibold cursor-not-allowed border border-red-300"
+                              >
+                                Đã Kín Chỗ Ngày Này
+                              </button>
+                            ) : (
+                              <Link
+                                to={`/booking/${room.id}`}
+                                state={{
+                                  checkIn: selectedDates.checkIn,
+                                  checkOut: selectedDates.checkOut
+                                }}
+                                className="btn-primary inline-flex items-center space-x-2 px-6 py-2.5"
+                              >
+                                <span>Đặt Phòng Ngay</span>
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )

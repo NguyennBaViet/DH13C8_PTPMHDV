@@ -30,6 +30,7 @@ export default function AdminRooms() {
   })
 
   const [imagePreview, setImagePreview] = useState(null)
+  const [occupiedRoomIdsToday, setOccupiedRoomIdsToday] = useState(new Set())
 
   // Load hotels and rooms on mount
   useEffect(() => {
@@ -51,13 +52,29 @@ export default function AdminRooms() {
     }
   }
 
-  // Fetch rooms
+  // Fetch rooms và tình trạng có khách hôm nay
   const fetchRooms = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await roomService.getAllRooms(0, 1000)
-      setRooms(data)
+      const today = new Date().toISOString().split('T')[0]
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+      const [data, availableToday] = await Promise.all([
+        roomService.getAllRooms(0, 1000),
+        roomService.searchRooms({ checkInDate: today, checkOutDate: tomorrow, page: 0, size: 1000 }).catch(() => [])
+      ])
+
+      const roomList = data || []
+      setRooms(roomList)
+
+      const availableIds = new Set((availableToday || []).map(r => r.id))
+      const occupiedIds = new Set(
+        roomList
+          .filter(r => (r.active !== undefined ? r.active : (r.isActive !== undefined ? r.isActive : true)) && !availableIds.has(r.id))
+          .map(r => r.id)
+      )
+      setOccupiedRoomIdsToday(occupiedIds)
     } catch (err) {
       console.error('Failed to fetch rooms:', err)
       setError('Không thể tải danh sách phòng')
@@ -432,6 +449,30 @@ export default function AdminRooms() {
           </div>
         )}
 
+        {/* Thống kê nhanh tình trạng phòng */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="card-luxury p-4 text-center">
+            <p className="text-xs text-primary-500 font-medium">Tổng Số Phòng</p>
+            <p className="text-2xl font-bold text-primary-900 mt-1">{rooms.length}</p>
+          </div>
+          <div className="card-luxury p-4 text-center bg-emerald-50/50 border border-emerald-200">
+            <p className="text-xs text-emerald-700 font-medium">Phòng Trống Hôm Nay</p>
+            <p className="text-2xl font-bold text-emerald-800 mt-1">
+              {rooms.filter(r => (r.active ?? r.isActive ?? true) && !occupiedRoomIdsToday.has(r.id)).length}
+            </p>
+          </div>
+          <div className="card-luxury p-4 text-center bg-amber-50/50 border border-amber-200">
+            <p className="text-xs text-amber-700 font-medium">Đang Có Khách Hôm Nay</p>
+            <p className="text-2xl font-bold text-amber-800 mt-1">{occupiedRoomIdsToday.size}</p>
+          </div>
+          <div className="card-luxury p-4 text-center bg-gray-50 border border-gray-200">
+            <p className="text-xs text-gray-600 font-medium">Bảo Trì / Tạm Khóa</p>
+            <p className="text-2xl font-bold text-gray-700 mt-1">
+              {rooms.filter(r => !(r.active ?? r.isActive ?? true)).length}
+            </p>
+          </div>
+        </div>
+
         <div className="card-luxury">
           <div className="p-6 border-b flex items-center space-x-2">
             <Search size={20} className="text-primary-600" />
@@ -453,14 +494,15 @@ export default function AdminRooms() {
                   <th className="px-6 py-4 text-left font-semibold">Loại</th>
                   <th className="px-6 py-4 text-left font-semibold">Giá/Đêm</th>
                   <th className="px-6 py-4 text-left font-semibold">Sức Chứa</th>
-                  <th className="px-6 py-4 text-left font-semibold">Trạng Thái</th>
+                  <th className="px-6 py-4 text-left font-semibold">Tình Trạng Hôm Nay</th>
+                  <th className="px-6 py-4 text-left font-semibold">Trạng Thái Phục Vụ</th>
                   <th className="px-6 py-4 text-left font-semibold">Hành Động</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-8 text-center text-primary-600">
+                    <td colSpan="9" className="px-6 py-8 text-center text-primary-600">
                       Không có phòng nào
                     </td>
                   </tr>
@@ -481,6 +523,22 @@ export default function AdminRooms() {
                       <td className="px-6 py-4">{room.roomType}</td>
                       <td className="px-6 py-4">{(room.pricePerNight / 1000000).toFixed(1)}M VND</td>
                       <td className="px-6 py-4">{room.capacity} khách</td>
+                      <td className="px-6 py-4">
+                        {!(room.active ?? room.isActive ?? true) ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-300">
+                            Bảo trì
+                          </span>
+                        ) : occupiedRoomIdsToday.has(room.id) ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1.5 w-fit">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                            <span>Đang có khách</span>
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            Phòng trống
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <button
                           type="button"
