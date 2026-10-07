@@ -20,6 +20,14 @@ public class RoomController {
     private final RoomService         roomService;
     private final AvailabilityService availabilityService;
 
+    /** GET /api/rooms?page=0&size=100 – tất cả phòng có phân trang */
+    @GetMapping
+    public ResponseEntity<Page<RoomResponse>> getAllRooms(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        return ResponseEntity.ok(roomService.getAllRooms(page, size));
+    }
+
     /** GET /api/rooms/hotel/{hotelId} – tất cả phòng của 1 khách sạn */
     @GetMapping("/hotel/{hotelId}")
     public ResponseEntity<List<RoomResponse>> getRoomsByHotel(@PathVariable Long hotelId) {

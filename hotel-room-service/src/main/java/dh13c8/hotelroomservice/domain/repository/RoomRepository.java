@@ -16,6 +16,8 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
 
     List<Room> findByHotelIdAndIsActiveTrue(Long hotelId);
 
+    Page<Room> findByIsActiveTrue(Pageable pageable);
+
     /**
      * Tìm phòng còn trống trong khoảng ngày, theo giá và loại phòng.
      * Phòng "còn trống" = không có bất kỳ ngày nào trong [checkIn, checkOut-1]

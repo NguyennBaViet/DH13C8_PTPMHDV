@@ -24,6 +24,13 @@ public class RoomService {
     private final AmenityRepository         amenityRepository;
     private final RoomAvailabilityRepository availabilityRepository;
 
+    // ── Danh sách tất cả phòng có phân trang ─────────────────────────────────
+    @Transactional(readOnly = true)
+    public Page<RoomResponse> getAllRooms(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+        return roomRepository.findByIsActiveTrue(pageable).map(this::toResponse);
+    }
+
     // ── Danh sách phòng theo khách sạn ───────────────────────────────────────
     @Transactional(readOnly = true)
     public List<RoomResponse> getRoomsByHotel(Long hotelId) {

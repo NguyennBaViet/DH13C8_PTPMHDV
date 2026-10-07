@@ -175,12 +175,12 @@ export default function AdminRooms() {
     }
   }
 
-  if (!user || user.role !== 'ADMIN') {
+  if (!user) {
     return (
       <div className="min-h-screen bg-primary-50 flex items-center justify-center">
         <div className="card-luxury p-8 text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Truy Cập Bị Từ Chối</h1>
-          <p className="text-primary-600">Bạn không có quyền truy cập trang Admin</p>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Yêu Cầu Đăng Nhập</h1>
+          <p className="text-primary-600">Vui lòng đăng nhập để quản lý phòng</p>
         </div>
       </div>
     )
