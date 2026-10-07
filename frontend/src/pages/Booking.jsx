@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useLocation, useNavigate } from 'react-router-dom'
-import { MapPin, AlertCircle, Building, BedDouble, Calendar, User, Mail, Phone, FileText } from 'lucide-react'
+import { useParams, useLocation, useNavigate, Link } from 'react-router-dom'
+import { MapPin, AlertCircle, Calendar, User, Mail, Phone, FileText, ArrowLeft, BedDouble } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import roomService from '../services/roomService'
-import hotelService from '../services/hotelService'
 
 export default function Booking() {
   const { roomId } = useParams()
@@ -15,14 +14,6 @@ export default function Booking() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Hotel and room selection states
-  const [hotels, setHotels] = useState([])
-  const [rooms, setRooms] = useState([])
-  const [selectedHotel, setSelectedHotel] = useState('')
-  const [selectedRoom, setSelectedRoom] = useState('')
-  const [loadingHotels, setLoadingHotels] = useState(false)
-  const [loadingRooms, setLoadingRooms] = useState(false)
-
   const [formData, setFormData] = useState({
     checkIn: location.state?.checkIn || '',
     checkOut: location.state?.checkOut || '',
@@ -33,7 +24,7 @@ export default function Booking() {
     specialRequests: ''
   })
 
-  // Update user fields when user state is loaded
+  // Tự động điền thông tin tài khoản khi user đăng nhập
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -45,64 +36,34 @@ export default function Booking() {
     }
   }, [user])
 
-  // Initial load: fetch hotels & room (if roomId is provided)
+  // Tải thông tin phòng cố định theo roomId từ URL
   useEffect(() => {
     let isMounted = true
 
-    const initializeData = async () => {
+    const fetchRoom = async () => {
+      if (!roomId) {
+        if (isMounted) {
+          setError('Không tìm thấy mã phòng. Vui lòng chọn phòng từ danh sách khách sạn.')
+          setLoading(false)
+        }
+        return
+      }
+
       try {
         setLoading(true)
         setError(null)
-
-        // 1. Tải danh sách tất cả khách sạn
-        setLoadingHotels(true)
-        let hotelsData = []
-        try {
-          hotelsData = await hotelService.getAllHotels()
-          if (isMounted) {
-            setHotels(hotelsData || [])
-          }
-        } catch (err) {
-          console.error('Error fetching hotels:', err)
-        } finally {
-          if (isMounted) setLoadingHotels(false)
-        }
-
-        // 2. Nếu có roomId trong URL (ví dụ: /booking/3)
-        if (roomId) {
-          try {
-            const roomData = await roomService.getRoomById(roomId)
-            if (isMounted && roomData) {
-              setRoom(roomData)
-              setSelectedRoom(String(roomData.id))
-
-              const hotelIdVal = roomData.hotelId || roomData.hotel?.id
-              if (hotelIdVal) {
-                setSelectedHotel(String(hotelIdVal))
-                setLoadingRooms(true)
-                try {
-                  const hotelRooms = await roomService.getRoomsByHotelId(hotelIdVal)
-                  if (isMounted) {
-                    setRooms(hotelRooms || [])
-                  }
-                } catch (rErr) {
-                  console.error('Error fetching rooms by hotel:', rErr)
-                } finally {
-                  if (isMounted) setLoadingRooms(false)
-                }
-              }
-            }
-          } catch (roomErr) {
-            console.error('Error fetching room details:', roomErr)
-            if (isMounted) {
-              setError('Không thể tìm thấy thông tin phòng yêu cầu. Bạn có thể chọn phòng khác bên dưới.')
-            }
-          }
-        }
-      } catch (generalErr) {
-        console.error('Initialization error:', generalErr)
+        const roomData = await roomService.getRoomById(roomId)
         if (isMounted) {
-          setError('Lỗi khi tải dữ liệu trang đặt phòng: ' + generalErr.message)
+          if (roomData) {
+            setRoom(roomData)
+          } else {
+            setError('Không tìm thấy phòng yêu cầu')
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching room details:', err)
+        if (isMounted) {
+          setError('Không thể tải thông tin phòng: ' + (err.response?.data?.message || err.message))
         }
       } finally {
         if (isMounted) {
@@ -111,55 +72,15 @@ export default function Booking() {
       }
     }
 
-    initializeData()
+    fetchRoom()
 
     return () => {
       isMounted = false
     }
   }, [roomId])
 
-  // Khi người dùng đổi khách sạn
-  const handleHotelChange = async (hotelId) => {
-    setSelectedHotel(hotelId)
-    setSelectedRoom('')
-    setRoom(null)
-    setRooms([])
-
-    if (!hotelId) return
-
-    try {
-      setLoadingRooms(true)
-      const hotelRooms = await roomService.getRoomsByHotelId(hotelId)
-      setRooms(hotelRooms || [])
-    } catch (err) {
-      console.error('Error fetching rooms by hotel:', err)
-      setError('Lỗi tải danh sách phòng: ' + err.message)
-    } finally {
-      setLoadingRooms(false)
-    }
-  }
-
-  // Khi người dùng đổi phòng
-  const handleRoomChange = async (rId) => {
-    setSelectedRoom(rId)
-    if (!rId) {
-      setRoom(null)
-      return
-    }
-
-    try {
-      setLoading(true)
-      const roomData = await roomService.getRoomById(rId)
-      setRoom(roomData)
-    } catch (err) {
-      console.error('Error fetching room details:', err)
-      setError('Lỗi tải thông tin phòng: ' + err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const roomPrice = room?.pricePerNight || 0
+
   const calculateNights = () => {
     if (formData.checkIn && formData.checkOut) {
       const start = new Date(formData.checkIn)
@@ -170,6 +91,7 @@ export default function Booking() {
     }
     return 0
   }
+
   const nights = calculateNights()
   const totalPrice = roomPrice * nights
 
@@ -183,8 +105,8 @@ export default function Booking() {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!selectedRoom || !room) {
-      setError('Vui lòng chọn phòng cần đặt')
+    if (!room) {
+      setError('Thông tin phòng không hợp lệ')
       return
     }
 
@@ -198,12 +120,12 @@ export default function Booking() {
       return
     }
 
-    navigate(`/payment/${selectedRoom}`, {
+    navigate(`/payment/${room.id}`, {
       state: {
-        roomId: selectedRoom,
+        roomId: room.id,
         roomNumber: room.roomNumber,
         roomType: room.roomType,
-        hotelId: room.hotelId || selectedHotel,
+        hotelId: room.hotelId,
         hotelName: room.hotelName,
         hotelCity: room.hotelCity,
         checkIn: formData.checkIn,
@@ -223,7 +145,16 @@ export default function Booking() {
   return (
     <div className="min-h-screen bg-primary-50 py-12">
       <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-4xl font-bold text-primary-900 mb-8">Đặt Phòng</h1>
+        <div className="flex items-center space-x-4 mb-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-full hover:bg-primary-100 text-primary-700 transition"
+            title="Quay lại"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h1 className="text-4xl font-bold text-primary-900">Đặt Phòng</h1>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start justify-between">
@@ -237,58 +168,44 @@ export default function Booking() {
           </div>
         )}
 
-        {loading && !room && roomId ? (
+        {loading ? (
           <div className="text-center py-16 card-luxury">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-luxury-gold border-t-transparent mb-4"></div>
             <p className="text-primary-600 text-lg">Đang tải thông tin phòng...</p>
           </div>
+        ) : !room ? (
+          <div className="card-luxury p-12 text-center max-w-lg mx-auto">
+            <BedDouble size={48} className="mx-auto text-primary-400 mb-4" />
+            <h2 className="text-2xl font-bold text-primary-900 mb-2">Không Tìm Thấy Phòng</h2>
+            <p className="text-primary-600 mb-6">
+              Không thể tải thông tin phòng bạn đã chọn. Vui lòng quay lại danh sách khách sạn để chọn phòng.
+            </p>
+            <Link to="/hotels" className="btn-primary inline-block">
+              Xem Danh Sách Khách Sạn
+            </Link>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Form */}
+            {/* Form Đặt Phòng */}
             <div className="md:col-span-2">
               <form onSubmit={handleSubmit} className="card-luxury p-8 space-y-6">
-                {/* Hotel and Room Selection */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b pb-6 mb-6">
+                {/* Thông tin phòng đã chọn cố định */}
+                <div className="bg-primary-50 border border-primary-200 rounded-lg p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <label className="form-label flex items-center space-x-1">
-                      <Building size={16} className="text-luxury-gold" />
-                      <span>Chọn Khách Sạn</span>
-                    </label>
-                    <select
-                      value={selectedHotel}
-                      onChange={(e) => handleHotelChange(e.target.value)}
-                      className="form-input"
-                      disabled={loadingHotels}
-                      required
-                    >
-                      <option value="">-- Chọn Khách Sạn --</option>
-                      {hotels.map((hotel) => (
-                        <option key={hotel.id} value={hotel.id}>
-                          {hotel.name || hotel.hotelName} {hotel.city ? `(${hotel.city})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <h2 className="text-xl font-bold text-primary-900">{room.hotelName || 'Khách Sạn'}</h2>
+                    <p className="text-luxury-gold font-semibold text-lg">Phòng {room.roomNumber} ({room.roomType})</p>
+                    {room.hotelCity && (
+                      <p className="text-sm text-primary-600 flex items-center mt-1">
+                        <MapPin size={14} className="mr-1 text-luxury-gold" />
+                        {room.hotelCity}
+                      </p>
+                    )}
                   </div>
-
-                  <div>
-                    <label className="form-label flex items-center space-x-1">
-                      <BedDouble size={16} className="text-luxury-gold" />
-                      <span>Chọn Phòng</span>
-                    </label>
-                    <select
-                      value={selectedRoom}
-                      onChange={(e) => handleRoomChange(e.target.value)}
-                      className="form-input"
-                      disabled={!selectedHotel || loadingRooms}
-                      required
-                    >
-                      <option value="">-- Chọn Phòng --</option>
-                      {rooms.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          Phòng {r.roomNumber} ({r.roomType}) - {(r.pricePerNight ? (r.pricePerNight / 1000000).toFixed(1) : 0)}M/đêm
-                        </option>
-                      ))}
-                    </select>
+                  <div className="text-left sm:text-right">
+                    <p className="text-2xl font-bold text-luxury-gold">
+                      {(roomPrice / 1000000).toFixed(1)}M
+                    </p>
+                    <p className="text-xs text-primary-500">/đêm · Sức chứa {room.capacity || 2} khách</p>
                   </div>
                 </div>
 
@@ -408,93 +325,82 @@ export default function Booking() {
                 <button
                   type="submit"
                   className="btn-primary w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!room || !selectedRoom || loading}
+                  disabled={!room || loading}
                 >
                   Tiếp Tục Thanh Toán
                 </button>
               </form>
             </div>
 
-            {/* Summary */}
+            {/* Cột Tóm Tắt Chi Phí */}
             <div className="md:col-span-1">
               <div className="card-luxury p-6 sticky top-4">
                 <h2 className="text-2xl font-bold mb-6 text-primary-900">Tóm Tắt Đơn</h2>
 
-                {room ? (
-                  <>
-                    {/* Room Info */}
-                    <div className="bg-primary-50 rounded-lg p-4 mb-6">
-                      <h3 className="font-bold text-primary-900 mb-1">{room.hotelName || 'Khách sạn'}</h3>
-                      <p className="text-sm font-semibold text-luxury-gold mb-1">Phòng {room.roomNumber}</p>
-                      <p className="text-sm text-primary-600 mb-1">Loại: {room.roomType}</p>
-                      {room.capacity && (
-                        <p className="text-sm text-primary-600">Sức chứa: {room.capacity} khách</p>
-                      )}
-                      {room.hotelCity && (
-                        <div className="flex items-center text-sm text-primary-600 mt-2">
-                          <MapPin size={14} className="mr-1 text-luxury-gold" />
-                          <span>{room.hotelCity}</span>
-                        </div>
-                      )}
+                <div className="bg-primary-50 rounded-lg p-4 mb-6">
+                  <h3 className="font-bold text-primary-900 mb-1">{room.hotelName || 'Khách sạn'}</h3>
+                  <p className="text-sm font-semibold text-luxury-gold mb-1">Phòng {room.roomNumber}</p>
+                  <p className="text-sm text-primary-600 mb-1">Loại: {room.roomType}</p>
+                  {room.capacity && (
+                    <p className="text-sm text-primary-600">Sức chứa: {room.capacity} khách</p>
+                  )}
+                  {room.hotelCity && (
+                    <div className="flex items-center text-sm text-primary-600 mt-2">
+                      <MapPin size={14} className="mr-1 text-luxury-gold" />
+                      <span>{room.hotelCity}</span>
                     </div>
+                  )}
+                </div>
 
-                    <div className="space-y-3 mb-6 pb-6 border-b">
-                      <div className="flex justify-between">
-                        <span className="text-primary-600">Nhận phòng</span>
-                        <span className="font-semibold">
-                          {formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('vi-VN') : 'Chưa chọn'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-primary-600">Trả phòng</span>
-                        <span className="font-semibold">
-                          {formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('vi-VN') : 'Chưa chọn'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-primary-600">Số đêm</span>
-                        <span className="font-semibold">{nights} đêm</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 mb-6">
-                      {nights > 0 ? (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-primary-600">{(roomPrice / 1000000).toFixed(1)}M × {nights} đêm</span>
-                            <span className="font-semibold">{(totalPrice / 1000000).toFixed(1)}M</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-primary-600">Thuế & Phí</span>
-                            <span className="font-semibold text-green-600">Đã bao gồm</span>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded text-center">
-                          Vui lòng chọn ngày để tính giá
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="border-t pt-6">
-                      <div className="flex justify-between mb-4">
-                        <span className="font-bold text-lg">Tổng Cộng</span>
-                        <span className="text-2xl font-bold text-luxury-gold">
-                          {nights > 0 ? `${(totalPrice / 1000000).toFixed(1)}M` : 'Chưa tính'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-primary-600 text-center">
-                        ✓ Hoàn tiền 100% nếu hủy trước 24 giờ
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-primary-50 rounded-lg p-6 text-center text-primary-600">
-                    <BedDouble size={40} className="mx-auto text-primary-400 mb-3" />
-                    <p className="font-semibold text-primary-800 mb-1">Chưa chọn phòng</p>
-                    <p className="text-sm">Vui lòng chọn khách sạn và phòng bên cạnh để xem giá và chi tiết đơn.</p>
+                <div className="space-y-3 mb-6 pb-6 border-b">
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">Nhận phòng</span>
+                    <span className="font-semibold">
+                      {formData.checkIn ? new Date(formData.checkIn).toLocaleDateString('vi-VN') : 'Chưa chọn'}
+                    </span>
                   </div>
-                )}
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">Trả phòng</span>
+                    <span className="font-semibold">
+                      {formData.checkOut ? new Date(formData.checkOut).toLocaleDateString('vi-VN') : 'Chưa chọn'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-primary-600">Số đêm</span>
+                    <span className="font-semibold">{nights} đêm</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  {nights > 0 ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-primary-600">{(roomPrice / 1000000).toFixed(1)}M × {nights} đêm</span>
+                        <span className="font-semibold">{(totalPrice / 1000000).toFixed(1)}M</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-primary-600">Thuế & Phí</span>
+                        <span className="font-semibold text-green-600">Đã bao gồm</span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded text-center">
+                      Vui lòng chọn ngày để tính giá
+                    </p>
+                  )}
+                </div>
+
+                <div className="border-t pt-6">
+                  <div className="flex justify-between mb-4">
+                    <span className="font-bold text-lg">Tổng Cộng</span>
+                    <span className="text-2xl font-bold text-luxury-gold">
+                      {nights > 0 ? `${(totalPrice / 1000000).toFixed(1)}M` : 'Chưa tính'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-primary-600 text-center">
+                    ✓ Hoàn tiền 100% nếu hủy trước 24 giờ
+                  </p>
+                </div>
               </div>
             </div>
           </div>
