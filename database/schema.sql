@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     capacity         TINYINT       NOT NULL DEFAULT 2,
     price_per_night  DECIMAL(12,2) NOT NULL,
     images           JSON,
+    image            LONGTEXT,
     is_active        TINYINT(1)    NOT NULL DEFAULT 1,
     created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
