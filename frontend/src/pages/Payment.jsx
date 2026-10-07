@@ -216,9 +216,9 @@ export default function Payment() {
               <h2 className="text-2xl font-bold mb-6 text-primary-900">Tóm Tắt</h2>
 
               <div className="bg-primary-50 rounded-lg p-4 mb-6">
-                <h3 className="font-bold text-primary-900 mb-1">Mois Luxury Suite</h3>
+                <h3 className="font-bold text-primary-900 mb-1">{bookingData.hotelName || 'Mois Hotel'}</h3>
                 <p className="text-sm text-primary-600">
-                  Phòng Đôi · {checkIn && checkOut 
+                  {bookingData.roomNumber ? `Phòng ${bookingData.roomNumber} (${bookingData.roomType || ''})` : 'Phòng tiêu chuẩn'} · {checkIn && checkOut 
                     ? `${new Date(checkIn).toLocaleDateString('vi-VN')} - ${new Date(checkOut).toLocaleDateString('vi-VN')}`
                     : 'N/A'
                   }
