@@ -18,9 +18,11 @@ public interface BookingService {
 
     Page<BookingResponse> getHotelBookings(Long hotelId, Pageable pageable);
 
+    Page<BookingResponse> getAllBookings(Pageable pageable);
+
     BookingResponse updateBooking(Long bookingId, Long userId, UpdateBookingRequest req);
 
-    BookingResponse cancelBooking(Long bookingId, Long userId, String reason);
+    BookingResponse cancelBooking(Long bookingId, Long userId, String role, String reason);
 
     BookingResponse confirmPayment(Long bookingId, Long paymentId);
 

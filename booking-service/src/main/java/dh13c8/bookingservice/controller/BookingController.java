@@ -27,6 +27,20 @@ public class BookingController {
     private final BookingService bookingService;
 
     // ============================================================
+    // 0. LẤY TẤT CẢ BOOKING (ADMIN/STAFF)
+    // GET /api/bookings
+    // ============================================================
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<BookingResponse>>> getAllBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<BookingResponse> result = bookingService.getAllBookings(pageable);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    // ============================================================
     // 1. TẠO BOOKING MỚI
     // POST /api/bookings
     // ============================================================
@@ -131,10 +145,11 @@ public class BookingController {
     public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader(value = "X-User-Role", defaultValue = "GUEST") String role,
             @RequestBody(required = false) Map<String, String> body) {
 
         String reason = body != null ? body.getOrDefault("reason", "Không có lý do") : "Không có lý do";
-        BookingResponse response = bookingService.cancelBooking(id, userId, reason);
+        BookingResponse response = bookingService.cancelBooking(id, userId, role, reason);
         return ResponseEntity.ok(ApiResponse.ok("Hủy booking thành công", response));
     }
 

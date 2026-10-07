@@ -205,6 +205,12 @@ public class BookingServiceImpl implements BookingService {
                 .map(this::toResponse);
     }
 
+    @Override
+    public Page<BookingResponse> getAllBookings(Pageable pageable) {
+        return bookingRepo.findAll(pageable)
+                .map(this::toResponse);
+    }
+
     // ============================================================
     // 4. CẬP NHẬT BOOKING (chỉ khi PENDING)
     // ============================================================
@@ -299,10 +305,10 @@ public class BookingServiceImpl implements BookingService {
     // ============================================================
     @Override
     @Transactional
-    public BookingResponse cancelBooking(Long bookingId, Long userId, String reason) {
+    public BookingResponse cancelBooking(Long bookingId, Long userId, String role, String reason) {
         Booking b = findBooking(bookingId);
 
-        if (!b.getUserId().equals(userId)) {
+        if (!"ADMIN".equals(role) && !"STAFF".equals(role) && !b.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         if (b.getStatus() == BookingStatus.CANCELLED || b.getStatus() == BookingStatus.REFUNDED) {

@@ -7,7 +7,7 @@ const bookingService = {
       const response = await api.post('/bookings', bookingData)
       return {
         success: true,
-        data: response.data
+        data: response.data?.data || response.data
       }
     } catch (error) {
       return {
@@ -17,15 +17,35 @@ const bookingService = {
     }
   },
 
-  // Get user's bookings
-  getMyBookings: async (page = 1, limit = 10) => {
+  // Get user's bookings (Spring Boot: GET /api/bookings/me)
+  getMyBookings: async (page = 0, size = 20) => {
     try {
-      const response = await api.get('/bookings/my-bookings', {
-        params: { page, limit }
+      const response = await api.get('/bookings/me', {
+        params: { page, size }
       })
+      const payload = response.data?.data || response.data
       return {
         success: true,
-        data: response.data
+        data: payload?.content || (Array.isArray(payload) ? payload : [])
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi lấy danh sách đơn đặt phòng'
+      }
+    }
+  },
+
+  // Get all bookings (Admin/Staff: GET /api/bookings)
+  getAllBookings: async (page = 0, size = 50) => {
+    try {
+      const response = await api.get('/bookings', {
+        params: { page, size }
+      })
+      const payload = response.data?.data || response.data
+      return {
+        success: true,
+        data: payload?.content || (Array.isArray(payload) ? payload : [])
       }
     } catch (error) {
       return {
@@ -41,7 +61,7 @@ const bookingService = {
       const response = await api.get(`/bookings/${bookingId}`)
       return {
         success: true,
-        data: response.data
+        data: response.data?.data || response.data
       }
     } catch (error) {
       return {
@@ -57,12 +77,44 @@ const bookingService = {
       const response = await api.post(`/bookings/${bookingId}/cancel`, { reason })
       return {
         success: true,
-        data: response.data
+        data: response.data?.data || response.data
       }
     } catch (error) {
       return {
         success: false,
         error: error.response?.data?.message || 'Lỗi hủy đơn đặt phòng'
+      }
+    }
+  },
+
+  // Check-in (Admin/Staff)
+  checkInBooking: async (bookingId) => {
+    try {
+      const response = await api.post(`/bookings/${bookingId}/check-in`)
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi check-in'
+      }
+    }
+  },
+
+  // Check-out (Admin/Staff)
+  checkOutBooking: async (bookingId) => {
+    try {
+      const response = await api.post(`/bookings/${bookingId}/check-out`)
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi check-out'
       }
     }
   },
@@ -73,30 +125,12 @@ const bookingService = {
       const response = await api.put(`/bookings/${bookingId}`, updateData)
       return {
         success: true,
-        data: response.data
+        data: response.data?.data || response.data
       }
     } catch (error) {
       return {
         success: false,
         error: error.response?.data?.message || 'Lỗi cập nhật đơn đặt phòng'
-      }
-    }
-  },
-
-  // Get booking history
-  getBookingHistory: async (userId, page = 1, limit = 10) => {
-    try {
-      const response = await api.get(`/bookings/user/${userId}/history`, {
-        params: { page, limit }
-      })
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Lỗi lấy lịch sử đặt phòng'
       }
     }
   }
