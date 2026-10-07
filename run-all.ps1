@@ -6,6 +6,18 @@ Write-Host "========================================================" -Foregroun
 Write-Host "   KHOI DONG TOAN BO HE THONG HOTEL MICROSERVICES" -ForegroundColor Yellow
 Write-Host "========================================================" -ForegroundColor Cyan
 
+# 0. Giải phóng các port nếu đang bị chiếm
+Write-Host "-> Kiem tra va giai phong cac port cu..." -ForegroundColor Gray
+$ports = @(8020, 8021, 8022, 8023, 8024, 8025, 5173)
+foreach ($p in $ports) {
+    $conns = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue
+    foreach ($c in $conns) {
+        Write-Host "   Tat process cu tren port $p (PID $($c.OwningProcess))..." -ForegroundColor DarkYellow
+        Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue
+    }
+}
+Start-Sleep -Seconds 1
+
 $services = @(
     @{ Name = "auth-service"; Port = 8021 },
     @{ Name = "user-service"; Port = 8022 },
@@ -17,7 +29,7 @@ $services = @(
 
 foreach ($s in $services) {
     Write-Host "-> Dang khoi dong $($s.Name) tren Port $($s.Port)..." -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:JAVA_HOME='C:\Program Files\Java\jdk-17'; cd '$PWD\$($s.Name)'; .\mvnw spring-boot:run"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:JAVA_HOME='C:\Program Files\Java\jdk-17'; cd '$PWD\$($s.Name)'; .\mvnw.cmd spring-boot:run"
     Start-Sleep -Seconds 2
 }
 
