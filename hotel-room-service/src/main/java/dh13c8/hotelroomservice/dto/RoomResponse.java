@@ -1,5 +1,6 @@
 package dh13c8.hotelroomservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,7 +19,15 @@ public class RoomResponse {
     private Integer     capacity;
     private BigDecimal  pricePerNight;
     private String      image;
+
+    @JsonProperty("isActive")
     private boolean     isActive;
+
+    @JsonProperty("active")
+    public boolean isActive() {
+        return isActive;
+    }
+
     private List<AmenityResponse> amenities;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

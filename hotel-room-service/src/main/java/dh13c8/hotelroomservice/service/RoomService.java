@@ -91,7 +91,8 @@ public class RoomService {
                 .floor(req.getFloor())
                 .capacity(req.getCapacity() != null ? req.getCapacity() : 2)
                 .pricePerNight(req.getPricePerNight())
-                .isActive(true)
+                .image(req.getImage())
+                .isActive(req.getIsActive() != null ? req.getIsActive() : true)
                 .build();
 
         if (req.getAmenityIds() != null && !req.getAmenityIds().isEmpty()) {
@@ -113,6 +114,8 @@ public class RoomService {
         if (req.getFloor()       != null) room.setFloor(req.getFloor());
         if (req.getCapacity()    != null) room.setCapacity(req.getCapacity());
         if (req.getPricePerNight() != null) room.setPricePerNight(req.getPricePerNight());
+        if (req.getImage()       != null) room.setImage(req.getImage());
+        if (req.getIsActive()    != null) room.setActive(req.getIsActive());
 
         if (req.getRoomType() != null) {
             try { room.setRoomType(Room.RoomType.valueOf(req.getRoomType().toUpperCase())); }

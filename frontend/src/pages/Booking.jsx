@@ -102,11 +102,18 @@ export default function Booking() {
     })
   }
 
+  const isRoomActive = room ? (room.isActive !== undefined ? room.isActive : (room.active !== undefined ? room.active : true)) : true
+
   const handleSubmit = (e) => {
     e.preventDefault()
 
     if (!room) {
       setError('Thông tin phòng không hợp lệ')
+      return
+    }
+
+    if (!isRoomActive) {
+      setError('Phòng này hiện đang tạm ngưng phục vụ hoặc bảo trì. Vui lòng chọn phòng khác.')
       return
     }
 
@@ -322,12 +329,19 @@ export default function Booking() {
                   />
                 </div>
 
+                {!isRoomActive && (
+                  <div className="mb-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg flex items-center space-x-2 text-sm">
+                    <AlertCircle size={18} className="flex-shrink-0 text-amber-600" />
+                    <span>Phòng này hiện đang tạm ngưng phục vụ (bảo trì). Bạn không thể tiến hành đặt phòng này.</span>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   className="btn-primary w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!room || loading}
+                  disabled={!room || loading || !isRoomActive}
                 >
-                  Tiếp Tục Thanh Toán
+                  {isRoomActive ? 'Tiếp Tục Thanh Toán' : 'Phòng Tạm Ngưng Phục Vụ'}
                 </button>
               </form>
             </div>

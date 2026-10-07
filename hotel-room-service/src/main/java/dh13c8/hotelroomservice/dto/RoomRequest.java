@@ -31,5 +31,15 @@ public class RoomRequest {
 
     private String image;  // Base64 hoặc URL
 
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    private Boolean isActive;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("active")
+    public void setActive(Boolean active) {
+        if (this.isActive == null) {
+            this.isActive = active;
+        }
+    }
+
     private Set<Long> amenityIds;
 }

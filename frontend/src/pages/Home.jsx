@@ -1,26 +1,34 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Star, MapPin, Calendar, Users } from 'lucide-react'
+import { Star, MapPin, Calendar, Users, Building2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import hotelService from '../services/hotelService'
 
 export default function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [checkIn, setCheckIn] = React.useState('')
-  const [checkOut, setCheckOut] = React.useState('')
-  const [guests, setGuests] = React.useState(1)
+  const [checkIn, setCheckIn] = useState('')
+  const [checkOut, setCheckOut] = useState('')
+  const [guests, setGuests] = useState(1)
+  const [featuredHotels, setFeaturedHotels] = useState([])
 
   // Auto-redirect admin users to admin dashboard
-  React.useEffect(() => {
+  useEffect(() => {
     if (user?.role === 'ADMIN') {
       navigate('/admin')
     }
   }, [user, navigate])
 
+  useEffect(() => {
+    hotelService.getHotels(0, 3)
+      .then(res => setFeaturedHotels(res || []))
+      .catch(err => console.warn('Lỗi tải khách sạn nổi bật:', err))
+  }, [])
+
   const handleSearch = (e) => {
     e.preventDefault()
     // Navigate to search with parameters
-    window.location.href = `/hotels?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
+    navigate(`/hotels?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`)
   }
 
   return (
@@ -117,24 +125,42 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {[1, 2, 3].map((i) => (
-            <Link key={i} to={`/hotels/${i}`} className="card-luxury overflow-hidden hover:shadow-luxury-lg cursor-pointer">
-              <div className="h-48 bg-gradient-to-br from-luxury-gold to-primary-800 flex items-center justify-center">
-                <span className="text-white text-4xl">🏨</span>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xl font-bold">Mois Luxury {i}</h3>
-                  <div className="flex items-center text-luxury-gold">
-                    <Star size={16} fill="currentColor" />
-                    <span className="ml-1">5.0</span>
+          {featuredHotels.map((hotel) => (
+            <Link key={hotel.id} to={`/hotels/${hotel.id}`} className="card-luxury overflow-hidden hover:shadow-luxury-lg cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div className="h-48 bg-primary-200 relative overflow-hidden">
+                  {hotel.coverImage ? (
+                    <img 
+                      src={hotel.coverImage} 
+                      alt={hotel.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-luxury-gold to-primary-800 flex items-center justify-center text-white">
+                      <Building2 size={40} />
+                    </div>
+                  )}
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xl font-bold group-hover:text-luxury-gold transition">{hotel.name}</h3>
+                    <div className="flex items-center text-yellow-500">
+                      <Star size={16} fill="currentColor" />
+                      <span className="ml-1 text-primary-900 font-semibold">{hotel.starRating || 5}.0</span>
+                    </div>
                   </div>
+                  <p className="text-primary-600 text-sm mb-4">
+                    <MapPin size={14} className="inline mr-1 text-luxury-gold" />
+                    {hotel.city}, Việt Nam
+                  </p>
+                  <p className="text-primary-500 text-xs line-clamp-2 leading-relaxed">
+                    {hotel.description}
+                  </p>
                 </div>
-                <p className="text-primary-600 mb-4">Hồ Chí Minh, Việt Nam</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-luxury-gold">2,500K</span>
-                  <button className="btn-small">Xem Chi Tiết</button>
-                </div>
+              </div>
+              <div className="p-6 pt-0 flex items-center justify-between border-t border-primary-50 mt-2">
+                <span className="text-xs text-primary-500">Khách sạn {hotel.starRating || 5} sao</span>
+                <button className="btn-small">Xem Chi Tiết →</button>
               </div>
             </Link>
           ))}

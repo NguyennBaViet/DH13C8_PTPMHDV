@@ -53,6 +53,10 @@ public class InternalRoomService {
         if (req.getRoomTypeId() == null || req.getCheckIn() == null || req.getCheckOut() == null) {
             return false;
         }
+        Room room = roomRepository.findById(req.getRoomTypeId()).orElse(null);
+        if (room == null || Boolean.FALSE.equals(room.isActive())) {
+            return false;
+        }
         long blocked = availabilityRepository.countBlockedDays(
                 req.getRoomTypeId(), req.getCheckIn(), req.getCheckOut());
         return blocked == 0;
@@ -64,6 +68,10 @@ public class InternalRoomService {
         Room room = roomRepository.findById(req.getRoomTypeId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy phòng id=" + req.getRoomTypeId()));
+
+        if (Boolean.FALSE.equals(room.isActive())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Phòng này hiện đang tạm ngưng phục vụ hoặc đang bảo trì");
+        }
 
         long blocked = availabilityRepository.countBlockedDays(
                 req.getRoomTypeId(), req.getCheckIn(), req.getCheckOut());

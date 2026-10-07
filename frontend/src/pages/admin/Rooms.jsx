@@ -25,7 +25,8 @@ export default function AdminRooms() {
     capacity: 2,
     description: '',
     floor: '',
-    image: ''
+    image: '',
+    isActive: true
   })
 
   const [imagePreview, setImagePreview] = useState(null)
@@ -91,6 +92,7 @@ export default function AdminRooms() {
   const handleEdit = (room) => {
     setEditId(room.id)
     setSelectedHotel(room.hotelId)
+    const isRoomActive = room.isActive !== undefined ? room.isActive : (room.active !== undefined ? room.active : true)
     setFormData({
       roomNumber: room.roomNumber,
       roomType: room.roomType,
@@ -98,10 +100,37 @@ export default function AdminRooms() {
       capacity: room.capacity,
       description: room.description || '',
       floor: room.floor || '',
-      image: room.image || ''
+      image: room.image || '',
+      isActive: isRoomActive
     })
     setImagePreview(room.image || null)
     setShowForm(true)
+  }
+
+  // Handle quick toggle active status
+  const handleToggleActive = async (room) => {
+    try {
+      setLoading(true)
+      const currentActive = room.isActive !== undefined ? room.isActive : (room.active !== undefined ? room.active : true)
+      const newActive = !currentActive
+      await roomService.updateRoom(room.id, {
+        hotelId: room.hotelId,
+        roomNumber: room.roomNumber,
+        roomType: room.roomType,
+        pricePerNight: room.pricePerNight,
+        capacity: room.capacity,
+        description: room.description,
+        floor: room.floor,
+        image: room.image,
+        isActive: newActive
+      })
+      await fetchRooms()
+    } catch (err) {
+      console.error('Error toggling room status:', err)
+      alert('Lỗi: ' + (err.response?.data?.message || err.message || 'Không thể đổi trạng thái phòng'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Handle delete
@@ -144,7 +173,8 @@ export default function AdminRooms() {
       capacity: parseInt(formData.capacity),
       description: formData.description,
       floor: formData.floor ? parseInt(formData.floor) : null,
-      image: formData.image || null
+      image: formData.image || null,
+      isActive: formData.isActive !== undefined ? formData.isActive : true
     }
 
     try {
@@ -164,7 +194,9 @@ export default function AdminRooms() {
         pricePerNight: '',
         capacity: 2,
         description: '',
-        floor: ''
+        floor: '',
+        image: '',
+        isActive: true
       })
       await fetchRooms()
     } catch (err) {
@@ -202,10 +234,11 @@ export default function AdminRooms() {
     r.hotelName?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const getStatusBadge = (isActive) => {
-    return isActive 
-      ? <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">Hoạt động</span>
-      : <span className="px-3 py-1 rounded-full text-sm bg-red-100 text-red-700">Không hoạt động</span>
+  const getStatusBadge = (room) => {
+    const active = room?.isActive !== undefined ? room.isActive : (room?.active !== undefined ? room.active : true)
+    return active 
+      ? <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">Hoạt động</span>
+      : <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300">Không hoạt động</span>
   }
 
   return (
@@ -225,7 +258,8 @@ export default function AdminRooms() {
                 capacity: 2,
                 description: '',
                 floor: '',
-                image: ''
+                image: '',
+                isActive: true
               })
               setImagePreview(null)
             }} 
@@ -345,6 +379,17 @@ export default function AdminRooms() {
                   className="form-input w-full" 
                 />
               </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Trạng Thái *</label>
+                <select 
+                  value={formData.isActive ? 'true' : 'false'} 
+                  onChange={(e) => setFormData({...formData, isActive: e.target.value === 'true'})} 
+                  className="form-input w-full"
+                >
+                  <option value="true">Hoạt động</option>
+                  <option value="false">Không hoạt động (Tạm dừng/Bảo trì)</option>
+                </select>
+              </div>
             </div>
 
             {/* Description */}
@@ -437,7 +482,14 @@ export default function AdminRooms() {
                       <td className="px-6 py-4">{(room.pricePerNight / 1000000).toFixed(1)}M VND</td>
                       <td className="px-6 py-4">{room.capacity} khách</td>
                       <td className="px-6 py-4">
-                        {getStatusBadge(room.isActive)}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(room)}
+                          title="Bấm để chuyển đổi trạng thái Hoạt động / Không hoạt động"
+                          className="cursor-pointer transition transform hover:scale-105"
+                        >
+                          {getStatusBadge(room)}
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
