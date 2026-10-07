@@ -117,24 +117,24 @@ const adminService = {
     },
     approve: async (id) => {
       try {
-        const response = await api.patch(`/admin/bookings/${id}/approve`)
-        return { success: true, data: response.data }
+        const response = await api.put(`/bookings/${id}/confirm`)
+        return { success: true, data: response.data?.data || response.data }
       } catch (error) {
         return { success: false, error: error.response?.data?.message || 'Lỗi phê duyệt đơn đặt' }
       }
     },
     reject: async (id, reason = '') => {
       try {
-        const response = await api.patch(`/admin/bookings/${id}/reject`, { reason })
-        return { success: true, data: response.data }
+        const response = await api.post(`/bookings/${id}/cancel`, { reason })
+        return { success: true, data: response.data?.data || response.data }
       } catch (error) {
         return { success: false, error: error.response?.data?.message || 'Lỗi từ chối đơn đặt' }
       }
     },
     cancel: async (id, reason = '') => {
       try {
-        const response = await api.patch(`/admin/bookings/${id}/cancel`, { reason })
-        return { success: true, data: response.data }
+        const response = await api.post(`/bookings/${id}/cancel`, { reason })
+        return { success: true, data: response.data?.data || response.data }
       } catch (error) {
         return { success: false, error: error.response?.data?.message || 'Lỗi hủy đơn đặt' }
       }
@@ -237,8 +237,9 @@ const adminService = {
     },
     getRecentBookings: async (limit = 10) => {
       try {
-        const response = await api.get('/admin/dashboard/recent-bookings', { params: { limit } })
-        return { success: true, data: response.data }
+        const response = await api.get('/bookings', { params: { page: 0, size: limit } })
+        const payload = response.data?.data || response.data
+        return { success: true, data: payload?.content || (Array.isArray(payload) ? payload : []) }
       } catch (error) {
         return { success: false, error: error.response?.data?.message || 'Lỗi lấy đơn đặt gần đây' }
       }

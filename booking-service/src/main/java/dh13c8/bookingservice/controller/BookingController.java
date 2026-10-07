@@ -167,6 +167,20 @@ public class BookingController {
     }
 
     // ============================================================
+    // 9.5. XÁC NHẬN / PHÊ DUYỆT BOOKING (ADMIN/STAFF)
+    // PUT hoặc POST /api/bookings/{id}/confirm
+    // ============================================================
+    @RequestMapping(value = "/{id}/confirm", method = {RequestMethod.PUT, RequestMethod.POST})
+    public ResponseEntity<ApiResponse<BookingResponse>> confirmBooking(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", defaultValue = "GUEST") String role) {
+
+        log.info("📥 Phê duyệt booking id={} bởi role={}", id, role);
+        BookingResponse response = bookingService.confirmBooking(id, role);
+        return ResponseEntity.ok(ApiResponse.ok("Xác nhận booking thành công", response));
+    }
+
+    // ============================================================
     // 10. CHECK-IN (STAFF/ADMIN)
     // POST /api/bookings/{id}/check-in
     // ============================================================

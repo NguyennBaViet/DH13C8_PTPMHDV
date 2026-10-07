@@ -12,11 +12,11 @@ for %%p in (8020 8021 8022 8023 8024 8025 5173) do (
         taskkill /F /PID %%a >nul 2>&1
     )
 )
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 
 echo 1. Khoi dong auth-service (Port 8021)...
 start "Auth Service - Port 8021" cmd /k "cd auth-service && mvnw.cmd spring-boot:run"
-timeout /t 3 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 
 echo 2. Khoi dong user-service (Port 8022)...
 start "User Service - Port 8022" cmd /k "cd user-service && mvnw.cmd spring-boot:run"
@@ -29,7 +29,7 @@ start "Booking Service - Port 8024" cmd /k "cd booking-service && mvnw.cmd sprin
 
 echo 5. Khoi dong payment-noti-service (Port 8025)...
 start "Payment Noti Service - Port 8025" cmd /k "cd payment-noti-service && mvnw.cmd spring-boot:run"
-timeout /t 5 /nobreak >nul
+ping -n 5 127.0.0.1 >nul
 
 echo 6. Khoi dong API Gateway (Port 8020)...
 start "API Gateway - Port 8020" cmd /k "cd api-gateway && mvnw.cmd spring-boot:run"

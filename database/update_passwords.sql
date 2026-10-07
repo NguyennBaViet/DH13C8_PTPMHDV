@@ -1,8 +1,7 @@
 USE khachsan;
 
--- Hash của "123456" (BCrypt $2a$10$...)
--- Được tạo bằng: new BCryptPasswordEncoder(10).encode("123456")
-UPDATE users SET password = '$2a$10$eDyhFxCPLABo3MUiRvKhC.BmUFbFkYHEv.TJbQYm5QHqNOakXs8By'
+-- Hash cua "password123" (BCrypt $2a$10$...)
+UPDATE users SET password = '$2a$10$7pZ48Bj2yxUuqYuu6bZQz.MiOtopOYBlkkUFUlzxKnt40WqTjdp.C'
 WHERE username IN ('admin', 'staff01', 'guest01', 'guest02');
 
 -- Verify

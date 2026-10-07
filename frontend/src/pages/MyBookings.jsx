@@ -62,7 +62,7 @@ export default function MyBookings() {
       case 'CONFIRMED':
         return 'bg-green-100 text-green-700 border border-green-300'
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+        return 'bg-amber-100 text-amber-800 border border-amber-300'
       case 'CHECKED_IN':
         return 'bg-purple-100 text-purple-700 border border-purple-300'
       case 'COMPLETED':
@@ -83,7 +83,7 @@ export default function MyBookings() {
       case 'CONFIRMED':
         return 'Đã Xác Nhận'
       case 'PENDING':
-        return 'Chờ Thanh Toán'
+        return 'Chờ Xác Nhận'
       case 'CHECKED_IN':
         return 'Đang Lưu Trú'
       case 'COMPLETED':
@@ -279,6 +279,12 @@ export default function MyBookings() {
                     </span>
                   </div>
                 </div>
+
+                {selectedBooking.status === 'PENDING' && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    ℹ️ Đơn đặt phòng đang ở trạng thái <strong>Chờ xác nhận</strong>. Quản trị viên / nhân viên khách sạn sẽ sớm kiểm tra và xác nhận đơn của bạn.
+                  </div>
+                )}
 
                 <div className="border-t pt-3">
                   <span className="text-primary-500 block text-xs">Thông tin người liên hệ</span>

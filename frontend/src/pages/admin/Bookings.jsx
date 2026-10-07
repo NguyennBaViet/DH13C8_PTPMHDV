@@ -64,6 +64,27 @@ export default function AdminBookings() {
     }
   }
 
+  const handleConfirm = async (id) => {
+    if (!window.confirm('Xác nhận phê duyệt đơn đặt phòng này?')) return
+    setActionLoadingId(id)
+    try {
+      const res = await bookingService.confirmBooking(id)
+      if (res.success) {
+        alert('Xác nhận đơn đặt phòng thành công!')
+        await loadAllBookings()
+        if (selectedBooking && selectedBooking.id === id) {
+          setSelectedBooking((prev) => (prev ? { ...prev, status: 'CONFIRMED' } : null))
+        }
+      } else {
+        alert(res.error || 'Xác nhận đơn thất bại')
+      }
+    } catch (err) {
+      alert('Lỗi khi thực hiện xác nhận đơn')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
   const handleCheckOut = async (id) => {
     if (!window.confirm('Xác nhận khách trả phòng (Check-out)?')) return
     setActionLoadingId(id)
@@ -116,7 +137,7 @@ export default function AdminBookings() {
       case 'CONFIRMED':
         return 'bg-green-100 text-green-700 border border-green-300'
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+        return 'bg-amber-100 text-amber-800 border border-amber-300 font-semibold'
       case 'CHECKED_IN':
         return 'bg-purple-100 text-purple-700 border border-purple-300'
       case 'COMPLETED':
@@ -241,6 +262,17 @@ export default function AdminBookings() {
                             <Eye size={18} />
                           </button>
 
+                          {booking.status === 'PENDING' && (
+                            <button
+                              title="Xác nhận / Phê duyệt đơn"
+                              disabled={actionLoadingId === booking.id}
+                              onClick={() => handleConfirm(booking.id)}
+                              className="p-1.5 hover:bg-emerald-100 text-emerald-600 rounded transition"
+                            >
+                              <CheckCircle size={18} />
+                            </button>
+                          )}
+
                           {booking.status === 'CONFIRMED' && (
                             <button
                               title="Check-in"
@@ -358,7 +390,64 @@ export default function AdminBookings() {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                {selectedBooking.status === 'PENDING' && (
+                  <button
+                    disabled={actionLoadingId === selectedBooking.id}
+                    onClick={() => handleConfirm(selectedBooking.id)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center space-x-2 transition disabled:opacity-50"
+                  >
+                    {actionLoadingId === selectedBooking.id ? (
+                      <Loader size={16} className="animate-spin" />
+                    ) : (
+                      <CheckCircle size={16} />
+                    )}
+                    <span>Xác Nhận Đơn</span>
+                  </button>
+                )}
+
+                {selectedBooking.status === 'CONFIRMED' && (
+                  <button
+                    disabled={actionLoadingId === selectedBooking.id}
+                    onClick={() => {
+                      handleCheckIn(selectedBooking.id)
+                      setSelectedBooking(null)
+                    }}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center space-x-2 transition disabled:opacity-50"
+                  >
+                    <LogIn size={16} />
+                    <span>Check-in</span>
+                  </button>
+                )}
+
+                {selectedBooking.status === 'CHECKED_IN' && (
+                  <button
+                    disabled={actionLoadingId === selectedBooking.id}
+                    onClick={() => {
+                      handleCheckOut(selectedBooking.id)
+                      setSelectedBooking(null)
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold flex items-center space-x-2 transition disabled:opacity-50"
+                  >
+                    <LogOut size={16} />
+                    <span>Check-out</span>
+                  </button>
+                )}
+
+                {(selectedBooking.status === 'PENDING' || selectedBooking.status === 'CONFIRMED') && (
+                  <button
+                    disabled={actionLoadingId === selectedBooking.id}
+                    onClick={() => {
+                      handleCancel(selectedBooking.id)
+                      setSelectedBooking(null)
+                    }}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold flex items-center space-x-2 transition disabled:opacity-50"
+                  >
+                    <XCircle size={16} />
+                    <span>Hủy Đơn</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => setSelectedBooking(null)}
                   className="btn-secondary px-6"

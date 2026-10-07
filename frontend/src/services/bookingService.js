@@ -119,6 +119,22 @@ const bookingService = {
     }
   },
 
+  // Confirm booking (Admin/Staff)
+  confirmBooking: async (bookingId) => {
+    try {
+      const response = await api.put(`/bookings/${bookingId}/confirm`)
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi xác nhận đơn đặt phòng'
+      }
+    }
+  },
+
   // Update booking
   updateBooking: async (bookingId, updateData) => {
     try {

@@ -99,7 +99,7 @@ export default function Payment() {
       const createdPayment = paymentRes.data
       const paymentId = createdPayment.paymentId || createdPayment.id
 
-      // 3. Xử lý thanh toán mock -> confirm booking sang CONFIRMED và gửi email
+      // 3. Xử lý thanh toán -> ghi nhận thanh toán và gửi thông báo
       const processRes = await paymentService.processPayment({
         paymentId: paymentId,
         simulateSuccess: true,
@@ -116,7 +116,7 @@ export default function Payment() {
       setLoading(false)
       setTimeout(() => {
         navigate('/my-bookings')
-      }, 2000)
+      }, 2500)
 
     } catch (err) {
       console.error('Payment flow error:', err)
@@ -134,9 +134,14 @@ export default function Payment() {
     return (
       <div className="min-h-screen bg-primary-50 flex items-center justify-center py-12 px-4">
         <div className="bg-white rounded-lg shadow-luxury p-8 w-full max-w-md text-center">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-primary-900 mb-2">Thanh Toán Thành Công!</h2>
-          <p className="text-primary-600 mb-4">Đơn đặt phòng của bạn đã được xác nhận thành công trong hệ thống.</p>
+          <CheckCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-primary-900 mb-2">Đặt Phòng Thành Công!</h2>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 text-left">
+            <p className="text-sm text-amber-900 font-semibold mb-1">Trạng thái: Chờ xác nhận</p>
+            <p className="text-xs text-amber-700">
+              Đơn đặt phòng của bạn đã được ghi nhận. Quản trị viên hoặc nhân viên khách sạn sẽ duyệt và xác nhận đơn của bạn trong thời gian sớm nhất.
+            </p>
+          </div>
           <div className="flex items-center justify-center space-x-2 text-sm text-primary-500">
             <Loader className="w-4 h-4 animate-spin text-luxury-gold" />
             <span>Đang chuyển hướng sang Đơn Đặt Phòng Của Tôi...</span>

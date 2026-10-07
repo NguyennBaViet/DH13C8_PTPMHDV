@@ -26,6 +26,8 @@ public interface BookingService {
 
     BookingResponse confirmPayment(Long bookingId, Long paymentId);
 
+    BookingResponse confirmBooking(Long bookingId, String role);
+
     BookingResponse checkIn(Long bookingId, String role);
 
     BookingResponse checkOut(Long bookingId, String role);

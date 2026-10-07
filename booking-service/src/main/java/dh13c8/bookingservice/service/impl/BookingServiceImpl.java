@@ -162,15 +162,13 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException(ErrorCode.BOOKING_EXPIRED);
         }
 
-        // Xác nhận phòng chính thức (trừ tồn kho)
-        roomClient.confirmRooms(buildLockReq(b));
-
-        b.setStatus(BookingStatus.CONFIRMED);
+        // Lưu thông tin thanh toán & xóa lock timeout (để không bị auto release)
+        // Giữ trạng thái PENDING ("Chờ xác nhận") để Admin hoặc Staff phê duyệt thủ công
         b.setPaymentId(paymentId);
         b.setLockExpiresAt(null);
         bookingRepo.save(b);
 
-        log.info("✅ Booking {} đã CONFIRMED (paymentId={})", b.getBookingCode(), paymentId);
+        log.info("✅ Booking {} đã ghi nhận thanh toán (paymentId={}), giữ PENDING chờ Admin/Staff xác nhận", b.getBookingCode(), paymentId);
         return toResponse(b);
     }
 
@@ -323,13 +321,15 @@ public class BookingServiceImpl implements BookingService {
         roomClient.releaseRooms(buildLockReq(b));
 
         // Nếu đã thanh toán → hoàn tiền
-        if (b.getPaymentId() != null && b.getStatus() == BookingStatus.CONFIRMED) {
+        if (b.getPaymentId() != null) {
             try {
+                // Nếu đang PENDING (bị từ chối duyệt) hoặc hủy trước giờ quy định: hoàn 100%
+                boolean isPending = (b.getStatus() == BookingStatus.PENDING);
                 long hoursUntilCheckIn = ChronoUnit.HOURS.between(LocalDateTime.now(),
                         b.getCheckIn().atStartOfDay());
                 BigDecimal refundAmount;
 
-                if (hoursUntilCheckIn >= cancelFreeBeforeHours) {
+                if (isPending || hoursUntilCheckIn >= cancelFreeBeforeHours) {
                     refundAmount = b.getTotalPrice(); // Hoàn 100%
                     log.info("💰 Hoàn 100% = {}", refundAmount);
                 } else {
@@ -353,6 +353,33 @@ public class BookingServiceImpl implements BookingService {
         bookingRepo.save(b);
 
         log.info("✅ Đã hủy booking {} - status={}", b.getBookingCode(), b.getStatus());
+        return toResponse(b);
+    }
+
+    // ============================================================
+    // 5.5. XÁC NHẬN / PHÊ DUYỆT BOOKING (STAFF/ADMIN)
+    // ============================================================
+    @Override
+    @Transactional
+    public BookingResponse confirmBooking(Long bookingId, String role) {
+        if (!"STAFF".equals(role) && !"ADMIN".equals(role)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Chỉ STAFF hoặc ADMIN mới có quyền xác nhận booking");
+        }
+        Booking b = findBooking(bookingId);
+
+        if (b.getStatus() != BookingStatus.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION,
+                    "Chỉ xác nhận được booking ở trạng thái PENDING (Chờ xác nhận)");
+        }
+
+        // Chuyển phòng từ LOCKED sang BOOKED
+        roomClient.confirmRooms(buildLockReq(b));
+
+        b.setStatus(BookingStatus.CONFIRMED);
+        b.setLockExpiresAt(null);
+        bookingRepo.save(b);
+
+        log.info("✅ Booking {} đã được Admin/Staff ({}) xác nhận (CONFIRMED)", b.getBookingCode(), role);
         return toResponse(b);
     }
 
