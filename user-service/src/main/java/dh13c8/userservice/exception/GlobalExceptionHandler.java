@@ -29,6 +29,7 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("status",    400);
         body.put("error",     "Validation Failed");
+        body.put("message",   errors.values().stream().findFirst().orElse("Dữ liệu không hợp lệ"));
         body.put("details",   errors);
         return ResponseEntity.badRequest().body(body);
     }

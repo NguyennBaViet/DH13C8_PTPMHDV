@@ -1,9 +1,11 @@
 package dh13c8.userservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChangePasswordRequest {
 
     @NotBlank(message = "Mật khẩu cũ không được để trống")

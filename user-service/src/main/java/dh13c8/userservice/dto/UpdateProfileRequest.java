@@ -1,15 +1,17 @@
 package dh13c8.userservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UpdateProfileRequest {
 
     @Size(max = 100, message = "Họ tên tối đa 100 ký tự")
     private String fullName;
 
-    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$",
+    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$|^$",
              message = "Số điện thoại không hợp lệ")
     private String phone;
 

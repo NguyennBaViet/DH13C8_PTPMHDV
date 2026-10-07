@@ -1,9 +1,11 @@
 package dh13c8.authservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RegisterRequest {
 
     @NotBlank(message = "Username không được để trống")
