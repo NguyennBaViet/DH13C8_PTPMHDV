@@ -1,0 +1,600 @@
+================================================================================
+               DANH MỤC THÀNH PHẦN & TRÁCH NHIỆM CỦA HỆ THỐNG
+        3.4.2: Phân công chức vụ chi tiết cho từng thành phần
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│        ARCHITECTURE COMPONENT RESPONSIBILITY MATRIX (Danh Mục Thành Phần)   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    LAYER 1: API GATEWAY                               │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │                                                                        │ │
+│  │  Component: API Gateway (Spring Cloud Gateway)                        │ │
+│  │  Port: 8020                                                           │ │
+│  │  Framework: Spring Cloud Gateway + WebFlux (Async)                   │ │
+│  │                                                                        │ │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │ │
+│  │  │  ROUTING MODULE                                                │   │ │
+│  │  ├────────────────────────────────────────────────────────────────┤   │ │
+│  │  │  Responsibility: Route requests to correct microservice        │   │ │
+│  │  │                                                                │   │ │
+│  │  │  ✓ /api/auth/**        → Auth Service (8021)                 │   │ │
+│  │  │  ✓ /api/users/**       → User Service (8022)                 │   │ │
+│  │  │  ✓ /api/hotels/**      → Hotel-Room Service (8023)           │   │ │
+│  │  │  ✓ /api/rooms/**       → Hotel-Room Service (8023)           │   │ │
+│  │  │  ✓ /api/bookings/**    → Booking Service (8024)              │   │ │
+│  │  │  ✓ /api/payments/**    → Payment Service (8025)              │   │ │
+│  │  │  ✓ /api/invoices/**    → Payment Service (8025)              │   │ │
+│  │  │  ✓ /api/notifications/**→ Payment Service (8025)             │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Implementation:                                               │   │ │
+│  │  │  - Path predicates for route matching                         │   │ │
+│  │  │  - Rewrite paths to match service endpoints                   │   │ │
+│  │  │  - Load balancing across service instances                    │   │ │
+│  │  │  - Circuit breaker for fault tolerance                        │   │ │
+│  │  └────────────────────────────────────────────────────────────────┘   │ │
+│  │                                                                        │ │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │ │
+│  │  │  AUTHENTICATION FILTER                                         │   │ │
+│  │  ├────────────────────────────────────────────────────────────────┤   │ │
+│  │  │  Responsibility: Validate JWT tokens & add user context        │   │ │
+│  │  │                                                                │   │ │
+│  │  │  ✓ Extract JWT from "Authorization: Bearer {token}"           │   │ │
+│  │  │  ✓ Validate JWT signature using secret key                    │   │ │
+│  │  │  ✓ Check token expiration                                     │   │ │
+│  │  │  ✓ Extract userId, username, roles from token                │   │ │
+│  │  │  ✓ Add user context to request headers                        │   │ │
+│  │  │  ✓ Return 401 Unauthorized if invalid/expired                 │   │ │
+│  │  │  ✓ Allow public endpoints (no auth needed)                    │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Public Endpoints (no JWT required):                          │   │ │
+│  │  │  - POST /api/auth/register                                    │   │ │
+│  │  │  - POST /api/auth/login                                       │   │ │
+│  │  │  - GET  /api/hotels                                           │   │ │
+│  │  │  - GET  /api/hotels/{id}                                      │   │ │
+│  │  │  - GET  /api/rooms/{id}                                       │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Protected Endpoints (JWT required):                          │   │ │
+│  │  │  - All /api/users/** endpoints                                │   │ │
+│  │  │  - All /api/bookings/** endpoints                             │   │ │
+│  │  │  - All /api/payments/** endpoints                             │   │ │
+│  │  └────────────────────────────────────────────────────────────────┘   │ │
+│  │                                                                        │ │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │ │
+│  │  │  AUTHORIZATION FILTER (Role-Based Access Control)              │   │ │
+│  │  ├────────────────────────────────────────────────────────────────┤   │ │
+│  │  │  Responsibility: Check user permissions based on role          │   │ │
+│  │  │                                                                │   │ │
+│  │  │  ✓ Extract roles from JWT token                               │   │ │
+│  │  │  ✓ Match endpoint requirements with user roles                │   │ │
+│  │  │  ✓ Return 403 Forbidden if insufficient permissions           │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Role Definitions:                                            │   │ │
+│  │  │  GUEST:  Can view hotels, create bookings, make payments      │   │ │
+│  │  │  STAFF:  Can manage bookings, view all bookings               │   │ │
+│  │  │  ADMIN:  All permissions + user management + analytics        │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Admin-Only Endpoints:                                        │   │ │
+│  │  │  - GET  /api/admin/**                                         │   │ │
+│  │  │  - POST /api/hotels                                           │   │ │
+│  │  │  - PUT  /api/hotels/{id}                                      │   │ │
+│  │  │  - DELETE /api/hotels/{id}                                    │   │ │
+│  │  └────────────────────────────────────────────────────────────────┘   │ │
+│  │                                                                        │ │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │ │
+│  │  │  LOGGING & MONITORING FILTER                                   │   │ │
+│  │  ├────────────────────────────────────────────────────────────────┤   │ │
+│  │  │  Responsibility: Log requests & track performance metrics      │   │ │
+│  │  │                                                                │   │ │
+│  │  │  ✓ Log incoming request (timestamp, method, path, user_id)    │   │ │
+│  │  │  ✓ Measure response time                                      │   │ │
+│  │  │  ✓ Log response status code                                   │   │ │
+│  │  │  ✓ Send metrics to monitoring system (Prometheus)             │   │ │
+│  │  │  ✓ Track error rates & latencies                              │   │ │
+│  │  │  ✓ Generate request ID for tracing                            │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Metrics Tracked:                                             │   │ │
+│  │  │  - request_count (by endpoint, method, status)                │   │ │
+│  │  │  - request_duration_seconds (latency)                         │   │ │
+│  │  │  - error_rate (5xx responses)                                 │   │ │
+│  │  │  - auth_failures (401/403)                                    │   │ │
+│  │  └────────────────────────────────────────────────────────────────┘   │ │
+│  │                                                                        │ │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │ │
+│  │  │  RATE LIMITING FILTER                                          │   │ │
+│  │  ├────────────────────────────────────────────────────────────────┤   │ │
+│  │  │  Responsibility: Prevent abuse & DoS attacks                   │   │ │
+│  │  │                                                                │   │ │
+│  │  │  ✓ Track request count per user/IP                            │   │ │
+│  │  │  ✓ Enforce rate limit (e.g., 100 req/min per user)            │   │ │
+│  │  │  ✓ Return 429 Too Many Requests if exceeded                    │   │ │
+│  │  │  ✓ Different limits for different endpoints                   │   │ │
+│  │  │  ✓ Reset counters periodically                                │   │ │
+│  │  │                                                                │   │ │
+│  │  │  Rate Limit Rules:                                            │   │ │
+│  │  │  - Search (GET /api/hotels/search): 1000 req/hour             │   │ │
+│  │  │  - Booking (POST /api/bookings): 100 req/hour                 │   │ │
+│  │  │  - Payment (POST /api/payments): 50 req/hour                  │   │ │
+│  │  │  - Admin operations: 1000 req/hour                            │   │ │
+│  │  │  - Default: 500 req/hour per user                             │   │ │
+│  │  └────────────────────────────────────────────────────────────────┘   │ │
+│  │                                                                        │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   LAYER 2: AUTH SERVICE (Port 8021)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Primary Responsibility: User Authentication & Authorization                │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  AUTHENTICATION MODULE                                                │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ User Registration (email, username, password validation)          │ │
+│  │  ✓ User Login (verify credentials, generate JWT tokens)              │ │
+│  │  ✓ JWT Token Generation (access token 15 min, refresh token 7 days)  │ │
+│  │  ✓ Token Validation (signature, expiration, claims)                  │ │
+│  │  ✓ Password Hashing (BCrypt algorithm)                               │ │
+│  │  ✓ Session Management (refresh token storage & expiration)           │ │
+│  │  ✓ Logout (revoke refresh tokens)                                    │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  AUTHORIZATION MODULE                                                │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Assign roles to users (GUEST, STAFF, ADMIN)                      │ │
+│  │  ✓ Role-based permission management                                 │ │
+│  │  ✓ Check user permissions before actions                             │ │
+│  │  ✓ Enforce principle of least privilege                             │ │
+│  │  ✓ Audit permission changes                                          │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  SECURITY MODULE                                                     │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ CORS configuration (allowed origins)                             │ │
+│  │  ✓ CSRF protection (if using cookies)                               │ │
+│  │  ✓ Secure password policy enforcement                               │ │
+│  │  ✓ Account lockout after failed attempts                            │ │
+│  │  ✓ Two-factor authentication (future)                               │ │
+│  │  ✓ Security audit logging                                           │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   LAYER 3: USER SERVICE (Port 8022)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Primary Responsibility: User Profile & Preferences Management              │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  USER PROFILE MODULE                                                 │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Retrieve user information (by self or admin)                      │ │
+│  │  ✓ Update profile (name, phone, address, avatar)                    │ │
+│  │  ✓ Manage user preferences (language, timezone, notifications)      │ │
+│  │  ✓ Validate profile completeness (onboarding)                       │ │
+│  │  ✓ Profile picture upload & storage                                 │ │
+│  │  ✓ Account deactivation & deletion (soft/hard delete)               │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  BOOKING HISTORY MODULE                                              │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Retrieve user's booking history (paginated)                      │ │
+│  │  ✓ Filter by status (PENDING, CONFIRMED, COMPLETED, CANCELLED)      │ │
+│  │  ✓ Filter by date range                                             │ │
+│  │  ✓ Search by hotel name or location                                 │ │
+│  │  ✓ Export booking history (PDF/Excel)                               │ │
+│  │  ✓ Download booking confirmation & receipts                         │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  WISHLIST & FAVORITES MODULE (Future)                                │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Add/remove hotels from wishlist                                  │ │
+│  │  ✓ View saved hotels & rooms                                        │ │
+│  │  ✓ Share wishlists                                                  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  REVIEW & RATING MODULE (Future)                                     │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Submit reviews & ratings after stay                              │ │
+│  │  ✓ Edit/delete own reviews                                          │ │
+│  │  ✓ View previous reviews                                            │ │
+│  │  ✓ Moderate inappropriate reviews (Admin)                           │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              LAYER 4: HOTEL-ROOM SERVICE (Port 8023)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Primary Responsibility: Hotel & Room Information Management                │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  HOTEL CATALOG MODULE                                                │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Retrieve all hotels with pagination                              │ │
+│  │  ✓ Get hotel details (name, address, phone, website, rating)        │ │
+│  │  ✓ Retrieve hotel amenities (pool, WiFi, gym, etc.)                 │ │
+│  │  ✓ Get hotel images/gallery                                         │ │
+│  │  ✓ Search hotels by location                                        │ │
+│  │  ✓ Filter by star rating, amenities                                 │ │
+│  │  ✓ Sort by rating, popularity, distance                             │ │
+│  │  ✓ Manage hotel info (Admin: create, update, delete)                │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  ROOM CATALOG MODULE                                                 │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Get rooms for specific hotel                                     │ │
+│  │  ✓ Retrieve room details (type, capacity, price, amenities)         │ │
+│  │  ✓ Get room images                                                  │ │
+│  │  ✓ Filter by room type (SINGLE, DOUBLE, SUITE, etc.)                │ │
+│  │  ✓ Filter by capacity (number of guests)                            │ │
+│  │  ✓ Sort by price (ascending/descending)                             │ │
+│  │  ✓ Manage rooms (Admin: create, update price, delete)               │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  AVAILABILITY & SEARCH MODULE                                        │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Advanced search:                                                 │ │
+│  │    - Location (city, nearby landmarks)                               │ │
+│  │    - Check-in & check-out dates                                     │ │
+│  │    - Number of guests                                               │ │
+│  │    - Room type & capacity preferences                               │ │
+│  │    - Budget range (min-max price)                                   │ │
+│  │    - Amenities required                                             │ │
+│  │                                                                     │ │
+│  │  ✓ Availability checking:                                           │ │
+│  │    - Query room_availability table                                  │ │
+│  │    - Calculate available dates                                      │ │
+│  │    - Calculate number of nights                                     │ │
+│  │    - Calculate total price                                          │ │
+│  │    - Reserve rooms temporarily                                      │ │
+│  │                                                                     │ │
+│  │  ✓ Real-time availability updates                                   │ │
+│  │  ✓ Handle double-booking prevention                                 │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  PRICING MODULE                                                      │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Retrieve base price per night per room                           │ │
+│  │  ✓ Apply seasonal pricing (peak/off-season)                         │ │
+│  │  ✓ Apply dynamic pricing (demand-based)                             │ │
+│  │  ✓ Calculate total price (nights × price/night)                     │ │
+│  │  ✓ Update prices (Admin)                                            │ │
+│  │  ✓ Apply promotional discounts                                      │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  AMENITY MANAGEMENT MODULE                                           │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Get list of available amenities                                  │ │
+│  │  ✓ Assign amenities to hotels                                       │ │
+│  │  ✓ Assign amenities to specific rooms                               │ │
+│  │  ✓ Display amenity icons/descriptions                               │ │
+│  │  ✓ Filter hotels/rooms by amenities                                 │ │
+│  │  ✓ Manage amenity catalog (Admin)                                   │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              LAYER 5: BOOKING SERVICE (Port 8024)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Primary Responsibility: Booking Management & Reservation Processing        │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  RESERVATION MODULE                                                  │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Create new booking (validate dates, rooms, guests)               │ │
+│  │  ✓ Calculate total price (base + tax)                               │ │
+│  │  ✓ Reserve room inventory                                           │ │
+│  │  ✓ Generate booking confirmation number                             │ │
+│  │  ✓ Set initial status (PENDING - waiting for payment)               │ │
+│  │  ✓ Add special requests (late check-in, high floor, etc.)           │ │
+│  │  ✓ Send booking confirmation email                                  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  BOOKING MODIFICATION MODULE                                         │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Update booking (only PENDING bookings):                           │ │
+│  │    - Change check-in/check-out dates                                 │ │
+│  │    - Change number of guests                                        │ │
+│  │    - Update special requests                                        │ │
+│  │  ✓ Validate new room availability                                   │ │
+│  │  ✓ Recalculate prices                                               │ │
+│  │  ✓ Notify user of changes                                           │ │
+│  │  ✓ Restrict modifications when payment processed                    │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  CANCELLATION MODULE                                                 │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Cancel booking (PENDING or CONFIRMED)                            │ │
+│  │  ✓ Calculate refund amount based on policy:                         │ │
+│  │    - ≥24h before check-in: 75% refund                               │ │
+│  │    - <24h before check-in: 50% refund                               │ │
+│  │    - After check-in: 0% refund                                      │ │
+│  │  ✓ Update booking status to CANCELLED                               │ │
+│  │  ✓ Release room inventory                                           │ │
+│  │  ✓ Trigger refund process via Payment Service                       │ │
+│  │  ✓ Send cancellation confirmation email                             │ │
+│  │  ✓ Calculate & audit refund amounts                                 │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  BOOKING STATE MACHINE MODULE                                        │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Manage state transitions:                                        │ │
+│  │    PENDING → CONFIRMED (after payment success)                      │ │
+│  │    PENDING → CANCELLED (timeout 24h or user cancels)                │ │
+│  │    CONFIRMED → COMPLETED (after check-out date)                     │ │
+│  │    CONFIRMED → CANCELLED (user cancels with refund)                 │ │
+│  │                                                                     │ │
+│  │  ✓ Validate transitions (prevent invalid state changes)             │ │
+│  │  ✓ Execute transition actions (send emails, update inventory)       │ │
+│  │  ✓ Publish domain events                                            │ │
+│  │  ✓ Audit state changes                                              │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  BOOKING QUERY MODULE                                                │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Retrieve user's bookings (filtered, paginated)                   │ │
+│  │  ✓ Retrieve booking details                                         │ │
+│  │  ✓ Retrieve all bookings (Admin)                                    │ │
+│  │  ✓ Advanced search & filtering:                                     │ │
+│  │    - By hotel, check-in/check-out dates                             │ │
+│  │    - By booking status                                              │ │
+│  │    - By user, guest count                                           │ │
+│  │    - Date range queries                                             │ │
+│  │  ✓ Sorting (date, price, status)                                    │ │
+│  │  ✓ Pagination with limit/offset                                     │ │
+│  │  ✓ Export booking data (Admin)                                      │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  AUTOMATED TASKS MODULE                                              │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Auto-complete bookings (scheduled daily):                        │ │
+│  │    - Find bookings past check-out date                               │ │
+│  │    - Update status to COMPLETED                                     │ │
+│  │    - Send thank you email                                           │ │
+│  │                                                                     │ │
+│  │  ✓ Auto-cancel pending bookings (after 24h):                        │ │
+│  │    - Find PENDING bookings older than 24h                           │ │
+│  │    - Update status to CANCELLED                                     │ │
+│  │    - Release room inventory                                         │ │
+│  │    - Send expiration notice                                         │ │
+│  │                                                                     │ │
+│  │  ✓ Send check-in reminders (1 day before):                          │ │
+│  │    - Query confirmed bookings checking in tomorrow                  │ │
+│  │    - Send reminder email with check-in info                         │ │
+│  │                                                                     │ │
+│  │  ✓ Send check-out reminders (morning of check-out):                 │ │
+│  │    - Query confirmed bookings checking out today                    │ │
+│  │    - Send reminder & check-out time info                            │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│           LAYER 6: PAYMENT-NOTI SERVICE (Port 8025)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Primary Responsibility: Payment Processing, Invoicing, Notifications       │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  PAYMENT PROCESSING MODULE (Stripe Integration)                     │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Create payment intent via Stripe API                             │ │
+│  │  ✓ Validate payment amount matches booking total                    │ │
+│  │  ✓ Accept payment card details (tokenized via frontend)             │ │
+│  │  ✓ Process charge via Stripe                                        │ │
+│  │  ✓ Store payment records with Stripe charge IDs                     │ │
+│  │  ✓ Initial status: PENDING (waiting for webhook)                    │ │
+│  │  ✓ Support multiple payment methods (card, bank transfer)           │ │
+│  │  ✓ Handle payment timeouts (15 min pending → auto-cancel)           │ │
+│  │  ✓ Secure PCI compliance (no card data stored locally)              │ │
+│  │  ✓ Test mode support (mock payments)                                │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  WEBHOOK & IDEMPOTENCY MODULE                                        │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Receive webhook events from Stripe:                              │ │
+│  │    - charge.succeeded (payment successful)                           │ │
+│  │    - charge.failed (payment declined)                                │ │
+│  │    - charge.refunded (refund processed)                              │ │
+│  │                                                                     │ │
+│  │  ✓ Verify webhook authenticity (signature validation)               │ │
+│  │  ✓ Implement idempotency (prevent duplicate processing):            │ │
+│  │    - Check if event already processed                                │ │
+│  │    - Use event ID as idempotency key                                 │ │
+│  │    - Return same response if already processed                       │ │
+│  │                                                                     │ │
+│  │  ✓ Handle webhook delivery failures:                                │ │
+│  │    - Stripe auto-retries (8 times over 24h)                         │ │
+│  │    - Manual webhook replay via Stripe dashboard                     │ │
+│  │                                                                     │ │
+│  │  ✓ Update payment status based on webhook                           │ │
+│  │  ✓ Confirm booking when payment succeeds                            │ │
+│  │  ✓ Keep booking PENDING if payment fails                            │ │
+│  │  ✓ Publish domain events for other services                         │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  REFUND MODULE                                                       │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Process full or partial refunds                                  │ │
+│  │  ✓ Calculate refund based on cancellation policy                    │ │
+│  │  ✓ Submit refund request to Stripe                                  │ │
+│  │  ✓ Update payment status to REFUNDING                               │ │
+│  │  ✓ Receive refund webhook (charge.refunded)                         │ │
+│  │  ✓ Update payment status to REFUNDED                                │ │
+│  │  ✓ Send refund confirmation email                                   │ │
+│  │  ✓ Estimate refund timeline (3-5 business days)                     │ │
+│  │  ✓ Track refund status                                              │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  INVOICE & BILLING MODULE                                            │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Generate invoice after successful payment:                       │ │
+│  │    - Calculate subtotal (base price × nights)                        │ │
+│  │    - Calculate tax (10% default)                                     │ │
+│  │    - Apply discounts if any                                          │ │
+│  │    - Calculate total amount                                         │ │
+│  │                                                                     │ │
+│  │  ✓ Create invoice number (unique per booking)                       │ │
+│  │  ✓ Generate PDF invoices                                            │ │
+│  │  ✓ Store invoice records in database                                │ │
+│  │  ✓ Allow invoice download                                           │ │
+│  │  ✓ Send invoice via email                                           │ │
+│  │  ✓ Support invoice resending                                        │ │
+│  │  ✓ Tax compliance & record keeping                                  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  EMAIL NOTIFICATION MODULE                                           │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Send booking confirmation email                                  │ │
+│  │  ✓ Send payment success confirmation                                │ │
+│  │  ✓ Send payment failure notification                                │ │
+│  │  ✓ Send refund confirmation                                         │ │
+│  │  ✓ Send invoice attachment                                          │ │
+│  │  ✓ Send check-in reminders (1 day before)                           │ │
+│  │  ✓ Send check-out reminders (morning of)                            │ │
+│  │  ✓ Send thank you email after stay                                  │ │
+│  │  ✓ Send special offers & promotions                                 │ │
+│  │  ✓ Use HTML email templates with branding                           │ │
+│  │  ✓ Support multilingual emails (future)                             │ │
+│  │  ✓ Gmail SMTP integration with OAuth2                               │ │
+│  │  ✓ Log all email sends & failures                                   │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  IN-APP NOTIFICATION MODULE                                          │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Create in-app notifications:                                     │ │
+│  │    - Booking confirmed notifications                                 │ │
+│  │    - Payment success/failure notifications                           │ │
+│  │    - Refund processed notifications                                  │ │
+│  │    - System alerts & important updates                               │ │
+│  │                                                                     │ │
+│  │  ✓ Notification features:                                           │ │
+│  │    - Store in database                                              │ │
+│  │    - Mark as read/unread                                            │ │
+│  │    - Delete notifications                                           │ │
+│  │    - Get unread count                                               │ │
+│  │    - Filter by type                                                 │ │
+│  │    - Paginate notifications                                         │ │
+│  │                                                                     │ │
+│  │  ✓ Real-time updates (future - WebSocket)                           │ │
+│  │  ✓ Push notifications (mobile app)                                  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  PAYMENT QUERY & REPORTING MODULE                                    │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Retrieve user's payment history                                  │ │
+│  │  ✓ Retrieve all payments (Admin)                                    │ │
+│  │  ✓ Search payments by:                                              │ │
+│  │    - Booking ID, User ID                                            │ │
+│  │    - Date range                                                     │ │
+│  │    - Status (SUCCESS, FAILED, REFUNDED)                             │ │
+│  │    - Amount range                                                   │ │
+│  │                                                                     │ │
+│  │  ✓ Generate payment reports (Admin):                                │ │
+│  │    - Daily/Monthly/Yearly revenue                                   │ │
+│  │    - Payment method breakdown                                       │ │
+│  │    - Success rate & failure analysis                                │ │
+│  │    - Refund statistics                                              │ │
+│  │    - Average transaction value                                      │ │
+│  │                                                                     │ │
+│  │  ✓ Export reports to Excel/PDF                                      │ │
+│  │  ✓ Reconciliation reports                                           │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         DATA LAYER COMPONENTS                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  PRIMARY DATABASE (MySQL)                                             │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Main persistent data store                                        │ │
+│  │  ✓ Character set: utf8mb4 (Unicode support for Vietnamese)           │ │
+│  │  ✓ All microservices share single database (shared schema)           │ │
+│  │  ✓ Tables: users, hotels, rooms, bookings, payments, etc.            │ │
+│  │  ✓ Connection pooling (HikariCP) for performance                     │ │
+│  │  ✓ Prepared statements for SQL injection prevention                  │ │
+│  │  ✓ Indexes on frequently queried columns                             │ │
+│  │  ✓ Foreign key constraints for data integrity                        │ │
+│  │  ✓ Transactions (ACID) for consistency                               │ │
+│  │  ✓ Backups & replication (recommended)                               │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  CACHE LAYER (Redis) - Optional but Recommended                      │ │
+│  ├────────────────────────────────────────────────────────────────────────┤ │
+│  │  ✓ Cache frequently accessed data:                                   │ │
+│  │    - User sessions                                                   │ │
+│  │    - JWT tokens                                                      │ │
+│  │    - Hotel & room listings                                           │ │
+│  │    - Room availability                                               │ │
+│  │                                                                     │ │
+│  │  ✓ TTL (Time To Live) settings                                       │ │
+│  │  ✓ Cache invalidation strategies                                     │ │
+│  │  ✓ Rate limiting counters                                            │ │
+│  │  ✓ Reduces database load                                             │ │
+│  │  ✓ Improves search performance                                       │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    RESPONSIBILITY SUMMARY TABLE                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Component             │  Primary Responsibility       │  Database        │
+│  ─────────────────────┼───────────────────────────────┼─────────────────  │
+│  API Gateway (8020)   │  Routing, Auth, Rate limit    │  None             │
+│  Auth Service (8021)  │  Authentication & JWT         │  users,           │
+│                       │                               │  refresh_tokens   │
+│  User Service (8022)  │  User profiles & history      │  users            │
+│  Hotel-Room (8023)    │  Hotels, rooms, availability  │  hotels, rooms,   │
+│                       │                               │  room_availability│
+│  Booking (8024)       │  Reservations & state mgmt    │  bookings,        │
+│                       │                               │  booking_details  │
+│  Payment-Noti (8025)  │  Payments, invoices, emails   │  payments,        │
+│                       │                               │  invoices,        │
+│                       │                               │  notifications    │
+│  MySQL Database       │  Persistent data storage      │  All tables       │
+│  Redis Cache          │  Performance optimization     │  Cache data       │
+│  Gmail SMTP           │  Email delivery               │  External         │
+│  Stripe API           │  Payment processing           │  External         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                            END OF DOCUMENT
+================================================================================

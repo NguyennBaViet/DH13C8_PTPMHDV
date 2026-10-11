@@ -28,6 +28,19 @@ public class HotelService {
         return hotelRepository.findByIsActiveTrueOrderByStarRatingDesc(p).map(this::toResponse);
     }
 
+    /** DEBUG: Get all hotels including inactive ones */
+    @Transactional(readOnly = true)
+    public List<HotelResponse> getAllHotelsIncludingInactive() {
+        return hotelRepository.findAllOrdered().stream()
+                .map(h -> {
+                    HotelResponse resp = toResponse(h);
+                    // Add debug info
+                    resp.setName(resp.getName() + " [id=" + h.getId() + ", active=" + h.isActive() + "]");
+                    return resp;
+                })
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public Page<HotelResponse> searchHotels(String city, Integer minStar, Integer maxStar,
                                              int page, int size) {

@@ -1,0 +1,639 @@
+================================================================================
+                    SƠ ĐỒ PHÂN RÃ THÀNH PHẦN HỆ THỐNG
+            3.4.1: Phân rã theo miền nghiệp vụ và 6 Microservices
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                  HỆ THỐNG ĐẶT PHÒNG KHÁCH SẠN (MOIS)                       │
+│              Hotel Booking Microservices Architecture                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│                          PRESENTATION LAYER                                │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │  FRONTEND (React + Vite)                        Port: 5173            │ │
+│  │  ├─ HomePage (Tìm kiếm khách sạn)                                     │ │
+│  │  ├─ HotelDetail (Chi tiết khách sạn)                                  │ │
+│  │  ├─ BookingPage (Tạo đặt phòng)                                       │ │
+│  │  ├─ PaymentPage (Thanh toán)                                          │ │
+│  │  ├─ ProfilePage (Hồ sơ cá nhân)                                       │ │
+│  │  ├─ BookingHistoryPage (Lịch sử)                                      │ │
+│  │  └─ AdminDashboard (Admin - Quản lý)                                  │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                          All requests to /api/**                            │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │           API GATEWAY (Spring Cloud Gateway)  Port: 8020              │ │
+│  │  ├─ Authentication Filter (JWT validation)                            │ │
+│  │  ├─ Authorization Filter (Role checking)                              │ │
+│  │  ├─ Logging & Monitoring Filter                                       │ │
+│  │  ├─ Rate Limiting Filter                                              │ │
+│  │  ├─ Request Routing & Load Balancing                                  │ │
+│  │  └─ Response Transformation                                           │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+│                          │                                                  │
+│           ┌──────────────┼──────────────┬──────────────┬──────────────┐    │
+│           │              │              │              │              │    │
+│      /api/auth/  /api/users/      /api/hotels/   /api/bookings/  /api/payments/
+│           │              │              │              │              │    │
+│           ▼              ▼              ▼              ▼              ▼    │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                    MICROSERVICES LAYER                              │  │
+│  │                                                                     │  │
+│  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐            │  │
+│  │  │   AUTH       │   │    USER      │   │ HOTEL-ROOM   │            │  │
+│  │  │  SERVICE     │   │   SERVICE    │   │  SERVICE     │            │  │
+│  │  │  Port 8021   │   │  Port 8022   │   │  Port 8023   │            │  │
+│  │  └──────────────┘   └──────────────┘   └──────────────┘            │  │
+│  │         │                   │                    │                  │  │
+│  │  ┌──────────────────────────────────┐   ┌──────────────────────┐    │  │
+│  │  │        BOOKING SERVICE           │   │  PAYMENT-NOTI        │    │  │
+│  │  │         Port 8024                │   │   SERVICE            │    │  │
+│  │  │                                  │   │   Port 8025          │    │  │
+│  │  │  ├─ Create Booking               │   │                      │    │  │
+│  │  │  ├─ Update Booking               │   │   ├─ Process Payment │    │  │
+│  │  │  ├─ Cancel Booking               │   │   ├─ Send Email      │    │  │
+│  │  │  ├─ State Machine Management     │   │   ├─ Generate Invoice│    │  │
+│  │  │  └─ Calculate Price              │   │   ├─ Webhook Handler │    │  │
+│  │  │                                  │   │   └─ Notification    │    │  │
+│  │  └──────────────────────────────────┘   └──────────────────────┘    │  │
+│  │                                                                     │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│           │                                                                │
+│           ▼                                                                │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                    DATA LAYER                                        │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │  │
+│  │  │   MySQL      │  │   Redis      │  │   Stripe     │               │  │
+│  │  │  Database    │  │   Cache      │  │   Payment    │               │  │
+│  │  │  Port 3306   │  │  Port 6379   │  │   Gateway    │               │  │
+│  │  │              │  │              │  │              │               │  │
+│  │  │ ├─ Users     │  │ ├─ JWT Cache │  │ ├─ Charge    │               │  │
+│  │  │ ├─ Hotels    │  │ ├─ User Data │  │ ├─ Refund    │               │  │
+│  │  │ ├─ Rooms     │  │ ├─ Sessions  │  │ ├─ Webhook   │               │  │
+│  │  │ ├─ Bookings  │  │ └─ Search    │  │ └─ Tokens    │               │  │
+│  │  │ ├─ Payments  │  │              │  │              │               │  │
+│  │  │ ├─ Invoices  │  │              │  │              │               │  │
+│  │  │ └─ Notif     │  │              │  │              │               │  │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘               │  │
+│  │                                                                     │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+                   CHI TIẾT CẤU TRÚC TỪNG MICROSERVICE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  AUTH SERVICE (Port 8021) - MIỀN NGHIỆP VỤ: XÁC THỰC & PHÂN QUYỀN          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CONTROLLER LAYER: AuthController                                  │   │
+│  │  ├─ POST /register        → Đăng ký tài khoản mới                  │   │
+│  │  ├─ POST /login           → Đăng nhập (trả JWT token)              │   │
+│  │  ├─ POST /refresh-token   → Cấp phát lại token                     │   │
+│  │  ├─ POST /logout          → Đăng xuất                              │   │
+│  │  └─ GET  /validate        → Kiểm tra token hợp lệ                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  SERVICE LAYER: AuthService                                        │   │
+│  │  ├─ register(RegisterRequest)                                      │   │
+│  │  │  ├─ Validate input (username, email)                            │   │
+│  │  │  ├─ Check duplicate username/email                              │   │
+│  │  │  ├─ Hash password (BCrypt)                                      │   │
+│  │  │  └─ Create User entity                                          │   │
+│  │  │                                                                  │   │
+│  │  ├─ login(LoginRequest)                                            │   │
+│  │  │  ├─ Find user by username                                       │   │
+│  │  │  ├─ Verify password                                             │   │
+│  │  │  ├─ Generate JWT access token (15 min)                          │   │
+│  │  │  ├─ Generate JWT refresh token (7 days)                         │   │
+│  │  │  └─ Save refresh token to DB                                    │   │
+│  │  │                                                                  │   │
+│  │  └─ validateToken(token)                                           │   │
+│  │     ├─ Parse JWT                                                   │   │
+│  │     ├─ Verify signature                                            │   │
+│  │     ├─ Check expiration                                            │   │
+│  │     └─ Extract user info                                           │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  REPOSITORY/DAO LAYER                                              │   │
+│  │  ├─ UserRepository extends JpaRepository<User, Long>               │   │
+│  │  │  ├─ findByUsername(String username)                             │   │
+│  │  │  ├─ findByEmail(String email)                                   │   │
+│  │  │  ├─ findByUsernameOrEmail(String, String)                       │   │
+│  │  │  └─ Custom @Query methods                                       │   │
+│  │  │                                                                  │   │
+│  │  └─ RefreshTokenRepository extends JpaRepository                   │   │
+│  │     ├─ findByUserId(Long userId)                                   │   │
+│  │     └─ deleteByExpiresAtBefore(LocalDateTime)                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  MODEL/ENTITY LAYER                                                │   │
+│  │  ├─ User                                                            │   │
+│  │  │  ├─ id: Long (PK)                                               │   │
+│  │  │  ├─ username: String (Unique)                                   │   │
+│  │  │  ├─ email: String (Unique)                                      │   │
+│  │  │  ├─ password: String (Encrypted)                                │   │
+│  │  │  ├─ fullName: String                                            │   │
+│  │  │  ├─ role: Enum(GUEST, STAFF, ADMIN)                             │   │
+│  │  │  ├─ isActive: Boolean                                           │   │
+│  │  │  └─ timestamps: createdAt, updatedAt                            │   │
+│  │  │                                                                  │   │
+│  │  └─ RefreshToken                                                   │   │
+│  │     ├─ id: Long (PK)                                               │   │
+│  │     ├─ userId: Long (FK → User)                                    │   │
+│  │     ├─ token: String                                               │   │
+│  │     ├─ expiresAt: LocalDateTime                                    │   │
+│  │     ├─ revoked: Boolean                                            │   │
+│  │     └─ createdAt: LocalDateTime                                    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│                    ┌────────────────────┐                                  │
+│                    │   DATABASE (MySQL) │                                  │
+│                    │  Table: users      │                                  │
+│                    │  Table: refresh    │                                  │
+│                    │         _tokens    │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  USER SERVICE (Port 8022) - MIỀN NGHIỆP VỤ: HỒ SƠ CÁ NHÂN & LỊCH SỬ         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CONTROLLER LAYER: UserController                                  │   │
+│  │  ├─ GET  /me               → Lấy thông tin người dùng hiện tại      │   │
+│  │  ├─ PUT  /me               → Cập nhật hồ sơ                         │   │
+│  │  ├─ PUT  /me/password      → Đổi mật khẩu                          │   │
+│  │  ├─ GET  /:id              → Lấy info người dùng khác (Admin)       │   │
+│  │  ├─ GET  (no path)         → Danh sách người dùng (Admin + filter)  │   │
+│  │  └─ PUT  /:id/role         → Cập nhật quyền hạn (Admin)             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  SERVICE LAYER: UserService                                        │   │
+│  │  ├─ getMe(Long userId)                                             │   │
+│  │  │  ├─ Validate userId from JWT                                    │   │
+│  │  │  ├─ Check cache (Redis)                                         │   │
+│  │  │  ├─ Query database if not cached                                │   │
+│  │  │  └─ Return UserDTO                                              │   │
+│  │  │                                                                  │   │
+│  │  ├─ updateProfile(Long userId, UpdateRequest)                      │   │
+│  │  │  ├─ Validate input (phone, address)                             │   │
+│  │  │  ├─ Update user fields                                          │   │
+│  │  │  ├─ Save to database                                            │   │
+│  │  │  ├─ Invalidate cache                                            │   │
+│  │  │  └─ Send notification                                           │   │
+│  │  │                                                                  │   │
+│  │  ├─ changePassword(Long userId, PasswordChangeRequest)             │   │
+│  │  │  ├─ Verify old password                                         │   │
+│  │  │  ├─ Validate new password strength                              │   │
+│  │  │  ├─ Hash new password                                           │   │
+│  │  │  ├─ Update password                                             │   │
+│  │  │  ├─ Invalidate all refresh tokens                               │   │
+│  │  │  └─ Send security email                                         │   │
+│  │  │                                                                  │   │
+│  │  └─ listUsers(PageRequest, Filters)                                │   │
+│  │     ├─ Apply role filter (if ADMIN)                                │   │
+│  │     ├─ Apply search filter (username, email)                       │   │
+│  │     ├─ Paginate results                                            │   │
+│  │     └─ Return paginated UserDTOs                                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  REPOSITORY/DAO LAYER                                              │   │
+│  │  └─ UserRepository extends JpaRepository<User, Long>               │   │
+│  │     ├─ findById(Long id)                                           │   │
+│  │     ├─ findByUsername(String username)                             │   │
+│  │     ├─ @Query("SELECT u FROM User u WHERE u.role = ?1")            │   │
+│  │     │         findByRole(Role role)                                │   │
+│  │     ├─ @Query with search & pagination                             │   │
+│  │     └─ Custom filter methods                                       │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  MODEL/ENTITY LAYER                                                │   │
+│  │  └─ User (extended from Auth Service)                              │   │
+│  │     ├─ Basic fields (id, username, email, password, role)          │   │
+│  │     ├─ phone: String                                               │   │
+│  │     ├─ avatar_url: String                                          │   │
+│  │     ├─ address: String                                             │   │
+│  │     ├─ isActive: Boolean                                           │   │
+│  │     ├─ @OneToMany bookings                                         │   │
+│  │     └─ timestamps                                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│                    ┌────────────────────┐                                  │
+│                    │   DATABASE (MySQL) │                                  │
+│                    │  Table: users      │                                  │
+│                    │  (Extended schema) │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  HOTEL-ROOM SERVICE (Port 8023) - MIỀN: KHÁCH SẠN, PHÒNG, TIỆN NGHI, SẴN CÓ  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CONTROLLER LAYER                                                  │   │
+│  │  HotelController:                                                  │   │
+│  │  ├─ GET  /            → Danh sách khách sạn (có pagination)        │   │
+│  │  ├─ GET  /search      → Tìm kiếm (city, checkIn, checkOut, guests) │   │
+│  │  ├─ GET  /:id         → Chi tiết khách sạn + tiện nghi             │   │
+│  │  ├─ POST /            → Tạo khách sạn mới (Admin)                  │   │
+│  │  ├─ PUT  /:id         → Cập nhật khách sạn (Admin)                 │   │
+│  │  └─ DELETE /:id       → Xóa khách sạn (Admin)                      │   │
+│  │                                                                    │   │
+│  │  RoomController:                                                   │   │
+│  │  ├─ GET  /hotels/:hotelId/rooms    → Danh sách phòng              │   │
+│  │  ├─ GET  /:roomId                  → Chi tiết phòng               │   │
+│  │  ├─ GET  /:roomId/availability     → Kiểm tra sẵn có              │   │
+│  │  ├─ POST /                         → Tạo phòng (Admin)            │   │
+│  │  ├─ PUT  /:roomId                  → Cập nhật phòng (Admin)       │   │
+│  │  └─ DELETE /:roomId                → Xóa phòng (Admin)            │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  SERVICE LAYER                                                     │   │
+│  │  HotelService:                                                     │   │
+│  │  ├─ getAll(PageRequest)                                            │   │
+│  │  ├─ search(SearchCriteria)                                         │   │
+│  │  │  ├─ Parse city, check-in, check-out, num guests                │   │
+│  │  │  ├─ Query hotels in city                                        │   │
+│  │  │  ├─ Filter by availability dates                                │   │
+│  │  │  └─ Return available hotels                                     │   │
+│  │  ├─ getById(Long id)                                               │   │
+│  │  │  ├─ Get hotel with amenities (join)                             │   │
+│  │  │  └─ Get available rooms                                         │   │
+│  │  ├─ create(HotelCreateRequest)   (Admin)                           │   │
+│  │  ├─ update(Long id, HotelUpdateRequest)   (Admin)                  │   │
+│  │  └─ delete(Long id)   (Admin)                                      │   │
+│  │                                                                    │   │
+│  │  RoomService:                                                      │   │
+│  │  ├─ getRoomsByHotel(Long hotelId)                                  │   │
+│  │  ├─ getAvailability(Long roomId, LocalDate checkIn,                │   │
+│  │  │                              LocalDate checkOut)                │   │
+│  │  │  ├─ Query room_availability table                               │   │
+│  │  │  ├─ Check if dates are available                                │   │
+│  │  │  ├─ Calculate total nights & price                              │   │
+│  │  │  └─ Return availability info                                    │   │
+│  │  ├─ create(RoomCreateRequest)   (Admin)                            │   │
+│  │  ├─ updatePrice(Long roomId, BigDecimal newPrice)   (Admin)        │   │
+│  │  └─ updateStatus(Long roomId, RoomStatus status)   (Admin)         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  REPOSITORY/DAO LAYER                                              │   │
+│  │  ├─ HotelRepository                                                │   │
+│  │  │  ├─ @Query find hotels by city                                  │   │
+│  │  │  ├─ @Query find with amenities (join)                           │   │
+│  │  │  └─ Custom search queries                                       │   │
+│  │  │                                                                  │   │
+│  │  ├─ RoomRepository                                                 │   │
+│  │  │  ├─ findByHotelId(Long hotelId)                                 │   │
+│  │  │  ├─ @Query check availability by date range                     │   │
+│  │  │  └─ @Query find available rooms                                 │   │
+│  │  │                                                                  │   │
+│  │  ├─ RoomAvailabilityRepository                                     │   │
+│  │  │  ├─ findByRoomIdAndAvailableDateBetween(...)                    │   │
+│  │  │  └─ countAvailableRooms(roomId, dateFrom, dateTo)               │   │
+│  │  │                                                                  │   │
+│  │  └─ AmenityRepository                                              │   │
+│  │     └─ find all amenities                                          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  MODEL/ENTITY LAYER                                                │   │
+│  │  ├─ Hotel                                                          │   │
+│  │  │  ├─ id, name, description, city, address                        │   │
+│  │  │  ├─ phone, email, website, starRating                           │   │
+│  │  │  ├─ @OneToMany rooms, @ManyToMany amenities                     │   │
+│  │  │  └─ timestamps                                                  │   │
+│  │  │                                                                  │   │
+│  │  ├─ Room                                                           │   │
+│  │  │  ├─ id, hotel_id(FK), roomNumber, roomType                      │   │
+│  │  │  ├─ capacity, pricePerNight, status                             │   │
+│  │  │  ├─ @OneToMany availability, @ManyToOne hotel                   │   │
+│  │  │  └─ timestamps                                                  │   │
+│  │  │                                                                  │   │
+│  │  ├─ RoomAvailability                                               │   │
+│  │  │  ├─ id, room_id(FK), availableDate                              │   │
+│  │  │  ├─ isAvailable: Boolean                                        │   │
+│  │  │  └─ @ManyToOne room                                             │   │
+│  │  │                                                                  │   │
+│  │  ├─ Amenity                                                        │   │
+│  │  │  ├─ id, name, icon, description                                 │   │
+│  │  │  ├─ @ManyToMany hotels                                          │   │
+│  │  │  └─ createdAt                                                   │   │
+│  │  │                                                                  │   │
+│  │  └─ HotelAmenity (Join Table)                                      │   │
+│  │     ├─ hotel_id(FK) → hotels                                       │   │
+│  │     └─ amenity_id(FK) → amenities                                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│                    ┌────────────────────┐                                  │
+│                    │   DATABASE (MySQL) │                                  │
+│                    │  Table: hotels     │                                  │
+│                    │  Table: rooms      │                                  │
+│                    │  Table: amenities  │                                  │
+│                    │  Table: room_      │                                  │
+│                    │         availability                                  │
+│                    │  Table: hotel_     │                                  │
+│                    │         amenities  │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  BOOKING SERVICE (Port 8024) - MIỀN: ĐẶT PHÒNG & QUẢN LÝ BOOKING           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CONTROLLER LAYER: BookingController                               │   │
+│  │  ├─ GET  /               → Danh sách đặt phòng của user             │   │
+│  │  ├─ GET  /:id            → Chi tiết một đặt phòng                   │   │
+│  │  ├─ POST /               → Tạo đặt phòng mới                        │   │
+│  │  ├─ PUT  /:id            → Cập nhật đặt phòng (nếu PENDING)         │   │
+│  │  ├─ DELETE /:id          → Hủy đặt phòng                            │   │
+│  │  ├─ GET  /admin/all      → Danh sách tất cả booking (Admin)         │   │
+│  │  └─ PUT  /admin/:id/status → Cập nhật status (Admin)               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  SERVICE LAYER: BookingService                                     │   │
+│  │  ├─ createBooking(BookingCreateRequest)                            │   │
+│  │  │  ├─ Validate room availability                                  │   │
+│  │  │  ├─ Check room is not occupied                                  │   │
+│  │  │  ├─ Calculate price & nights                                    │   │
+│  │  │  ├─ Create booking entity (status=PENDING)                      │   │
+│  │  │  ├─ Reserve rooms (update room_availability)                    │   │
+│  │  │  ├─ Send confirmation email                                     │   │
+│  │  │  └─ Return booking DTO                                          │   │
+│  │  │                                                                  │   │
+│  │  ├─ updateBooking(Long id, BookingUpdateRequest)                   │   │
+│  │  │  ├─ Check status is PENDING                                     │   │
+│  │  │  ├─ Validate new dates                                          │   │
+│  │  │  ├─ Recalculate price                                           │   │
+│  │  │  ├─ Update database                                             │   │
+│  │  │  └─ Send update email                                           │   │
+│  │  │                                                                  │   │
+│  │  ├─ cancelBooking(Long id)                                         │   │
+│  │  │  ├─ Check if can cancel (depends on policy)                     │   │
+│  │  │  ├─ Calculate refund amount                                      │   │
+│  │  │  ├─ Update status: CANCELLED                                    │   │
+│  │  │  ├─ Release rooms                                               │   │
+│  │  │  ├─ Trigger refund process                                      │   │
+│  │  │  └─ Send cancellation email                                     │   │
+│  │  │                                                                  │   │
+│  │  ├─ getMyBookings(Long userId, Filters)                            │   │
+│  │  │  ├─ Query by userId                                             │   │
+│  │  │  ├─ Filter by status                                            │   │
+│  │  │  ├─ Apply pagination                                            │   │
+│  │  │  └─ Return booking DTOs                                         │   │
+│  │  │                                                                  │   │
+│  │  ├─ transitionBookingState(Long id, NewStatus)                     │   │
+│  │  │  ├─ Validate state transition                                   │   │
+│  │  │  ├─ Execute transition actions                                  │   │
+│  │  │  ├─ Update database                                             │   │
+│  │  │  └─ Publish events                                              │   │
+│  │  │                                                                  │   │
+│  │  └─ @Scheduled autoCompleteBookings()                              │   │
+│  │     ├─ Find bookings past checkout date                            │   │
+│  │     ├─ Update status to COMPLETED                                  │   │
+│  │     └─ Send thank you email                                        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  REPOSITORY/DAO LAYER                                              │   │
+│  │  ├─ BookingRepository                                              │   │
+│  │  │  ├─ findByUserId(Long userId)                                   │   │
+│  │  │  ├─ findByStatus(BookingStatus status)                          │   │
+│  │  │  ├─ @Query find by date range                                   │   │
+│  │  │  ├─ @Query find past checkout date                              │   │
+│  │  │  └─ @Query custom filters                                       │   │
+│  │  │                                                                  │   │
+│  │  ├─ BookingDetailRepository                                        │   │
+│  │  │  └─ findByBookingId(Long bookingId)                             │   │
+│  │  │                                                                  │   │
+│  │  └─ BookingStateRepository (Audit trail)                           │   │
+│  │     └─ log all state transitions                                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  MODEL/ENTITY LAYER                                                │   │
+│  │  ├─ Booking (with State Machine)                                   │   │
+│  │  │  ├─ id, userId(FK), hotelId(FK), roomId(FK)                     │   │
+│  │  │  ├─ checkIn, checkOut, numGuests, numNights                     │   │
+│  │  │  ├─ status: ENUM(PENDING, CONFIRMED, CANCELLED, COMPLETED)      │   │
+│  │  │  ├─ specialRequests, totalPrice, tax                            │   │
+│  │  │  ├─ @OneToMany bookingDetails, @OneToOne payment                │   │
+│  │  │  └─ timestamps                                                  │   │
+│  │  │                                                                  │   │
+│  │  └─ BookingDetail                                                  │   │
+│  │     ├─ id, booking_id(FK), room_id(FK)                             │   │
+│  │     ├─ pricePerNight, numRooms, subtotal                           │   │
+│  │     └─ @ManyToOne booking, @ManyToOne room                         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│                    ┌────────────────────┐                                  │
+│                    │   DATABASE (MySQL) │                                  │
+│                    │  Table: bookings   │                                  │
+│                    │  Table: booking_   │                                  │
+│                    │         details    │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  PAYMENT-NOTI SERVICE (Port 8025) - MIỀN: THANH TOÁN, THÔNG BÁO, STRIPE   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  CONTROLLER LAYER                                                  │   │
+│  │  PaymentController:                                                │   │
+│  │  ├─ GET  /                    → Danh sách thanh toán của user       │   │
+│  │  ├─ GET  /:id                 → Chi tiết thanh toán                 │   │
+│  │  ├─ POST /                    → Tạo thanh toán mới (tới Stripe)    │   │
+│  │  ├─ POST /:id/refund          → Hoàn tiền                           │   │
+│  │  └─ GET  /admin/all           → Danh sách tất cả (Admin)            │   │
+│  │                                                                    │   │
+│  │  InvoiceController:                                                │   │
+│  │  ├─ GET  /                    → Danh sách hóa đơn                   │   │
+│  │  ├─ GET  /:id                 → Chi tiết hóa đơn                    │   │
+│  │  ├─ GET  /:id/download        → Download PDF hóa đơn                │   │
+│  │  └─ POST /:id/send            → Gửi hóa đơn qua email               │   │
+│  │                                                                    │   │
+│  │  NotificationController:                                           │   │
+│  │  ├─ GET  /                    → Danh sách thông báo                 │   │
+│  │  ├─ PUT  /:id/read            → Đánh dấu đã đọc                     │   │
+│  │  ├─ DELETE /:id               → Xóa thông báo                       │   │
+│  │  └─ PUT  /mark-all-as-read    → Đánh dấu tất cả đã đọc             │   │
+│  │                                                                    │   │
+│  │  WebhookController:                                                │   │
+│  │  └─ POST /stripe              → Nhận webhook từ Stripe              │   │
+│  │     ├─ Verify signature                                            │   │
+│  │     ├─ Idempotency check                                           │   │
+│  │     ├─ Process event (charge succeeded/failed)                     │   │
+│  │     └─ Return 200 OK                                               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  SERVICE LAYER                                                     │   │
+│  │  PaymentService:                                                   │   │
+│  │  ├─ createPayment(PaymentCreateRequest)                            │   │
+│  │  │  ├─ Get booking details                                         │   │
+│  │  │  ├─ Create payment record (status=PENDING)                      │   │
+│  │  │  ├─ Generate idempotency key                                    │   │
+│  │  │  ├─ Call Stripe API → Charge card                               │   │
+│  │  │  ├─ Wait for webhook confirmation                               │   │
+│  │  │  └─ Return payment DTO                                          │   │
+│  │  │                                                                  │   │
+│  │  ├─ processPaymentWebhook(StripeEvent)                             │   │
+│  │  │  ├─ Idempotency check (prevent duplicates)                      │   │
+│  │  │  ├─ Update payment status: SUCCESS                              │   │
+│  │  │  ├─ Confirm booking                                             │   │
+│  │  │  ├─ Generate invoice                                            │   │
+│  │  │  └─ Publish payment success event                               │   │
+│  │  │                                                                  │   │
+│  │  ├─ refundPayment(Long paymentId)                                  │   │
+│  │  │  ├─ Calculate refund amount                                     │   │
+│  │  │  ├─ Call Stripe refund API                                      │   │
+│  │  │  ├─ Update payment status: REFUNDING                            │   │
+│  │  │  └─ Wait for refund webhook                                     │   │
+│  │  │                                                                  │   │
+│  │  └─ getMyPayments(Long userId)                                     │   │
+│  │     └─ Return user's payment history                               │   │
+│  │                                                                    │   │
+│  │  InvoiceService:                                                   │   │
+│  │  ├─ generateInvoice(Long bookingId, Long paymentId)                │   │
+│  │  │  ├─ Get booking & payment details                               │   │
+│  │  │  ├─ Calculate subtotal, tax, discount                           │   │
+│  │  │  ├─ Create invoice record                                       │   │
+│  │  │  └─ Generate PDF                                                │   │
+│  │  │                                                                  │   │
+│  │  ├─ sendInvoiceEmail(Long invoiceId)                               │   │
+│  │  │  ├─ Get user email                                              │   │
+│  │  │  ├─ Attach PDF to email                                         │   │
+│  │  │  ├─ Send via Gmail SMTP                                         │   │
+│  │  │  └─ Log sent status                                             │   │
+│  │  │                                                                  │   │
+│  │  └─ downloadInvoice(Long invoiceId)                                │   │
+│  │     ├─ Get invoice data                                            │   │
+│  │     ├─ Generate or retrieve PDF                                    │   │
+│  │     └─ Return as file download                                     │   │
+│  │                                                                    │   │
+│  │  NotificationService:                                              │   │
+│  │  ├─ sendBookingConfirmation(Booking)                               │   │
+│  │  ├─ sendPaymentSuccessful(Payment)                                 │   │
+│  │  ├─ sendPaymentFailed(Payment)                                     │   │
+│  │  ├─ sendRefundConfirmation(Payment)                                │   │
+│  │  ├─ sendReminderCheckIn(Booking)                                   │   │
+│  │  └─ sendThankYouEmail(Booking)                                     │   │
+│  │                                                                    │   │
+│  │  WebhookService:                                                   │   │
+│  │  ├─ handleChargeSucceeded(Charge)                                  │   │
+│  │  ├─ handleChargeFailed(Charge)                                     │   │
+│  │  ├─ handleChargeRefunded(Charge)                                   │   │
+│  │  └─ handleWebhookEvent(Event)                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  REPOSITORY/DAO LAYER                                              │   │
+│  │  ├─ PaymentRepository                                              │   │
+│  │  │  ├─ findByBookingId(Long bookingId)                             │   │
+│  │  │  ├─ findByStatus(PaymentStatus status)                          │   │
+│  │  │  ├─ findByStripeChargeId(String chargeId)                       │   │
+│  │  │  └─ findByUserId(Long userId)                                   │   │
+│  │  │                                                                  │   │
+│  │  ├─ InvoiceRepository                                              │   │
+│  │  │  ├─ findByBookingId(Long bookingId)                             │   │
+│  │  │  └─ findByPaymentId(Long paymentId)                             │   │
+│  │  │                                                                  │   │
+│  │  ├─ NotificationRepository                                         │   │
+│  │  │  ├─ findByUserId(Long userId)                                   │   │
+│  │  │  ├─ findUnread(Long userId)                                     │   │
+│  │  │  └─ findByType(NotificationType type)                           │   │
+│  │  │                                                                  │   │
+│  │  └─ IdempotencyKeyRepository                                       │   │
+│  │     ├─ exists(String key)                                          │   │
+│  │     └─ deleteOlderThan(LocalDateTime cutoff)                       │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  MODEL/ENTITY LAYER                                                │   │
+│  │  ├─ Payment                                                        │   │
+│  │  │  ├─ id, booking_id(FK), user_id(FK)                             │   │
+│  │  │  ├─ amount, currency, paymentMethod                             │   │
+│  │  │  ├─ status: ENUM(PENDING, SUCCESS, FAILED, REFUNDED)            │   │
+│  │  │  ├─ stripeChargeId, stripePaymentIntentId                       │   │
+│  │  │  ├─ timestamps, completedAt, refundedAt                         │   │
+│  │  │  └─ @OneToOne invoice, @ManyToOne booking, user                 │   │
+│  │  │                                                                  │   │
+│  │  ├─ Invoice                                                        │   │
+│  │  │  ├─ id, booking_id(FK), payment_id(FK)                          │   │
+│  │  │  ├─ subtotal, tax_amount, discount                              │   │
+│  │  │  ├─ total_amount, issuedDate, dueDate                           │   │
+│  │  │  ├─ pdfUrl, invoiceNumber                                       │   │
+│  │  │  └─ @OneToOne payment, @ManyToOne booking                       │   │
+│  │  │                                                                  │   │
+│  │  ├─ Notification                                                   │   │
+│  │  │  ├─ id, user_id(FK)                                             │   │
+│  │  │  ├─ type: ENUM(BOOKING, PAYMENT, SYSTEM)                        │   │
+│  │  │  ├─ subject, message, isRead, createdAt                         │   │
+│  │  │  └─ @ManyToOne user                                             │   │
+│  │  │                                                                  │   │
+│  │  ├─ EmailLog                                                       │   │
+│  │  │  ├─ id, recipient, subject, body                                │   │
+│  │  │  ├─ status: ENUM(SENT, FAILED)                                  │   │
+│  │  │  └─ sentAt, errorMessage                                        │   │
+│  │  │                                                                  │   │
+│  │  └─ IdempotencyKey                                                 │   │
+│  │     ├─ id, key: String (Unique), status                            │   │
+│  │     ├─ processedAt, expiresAt                                      │   │
+│  │     └─ result: String (JSON for tracking)                          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                             │                                              │
+│                    ┌────────────────────┐                                  │
+│                    │   DATABASE (MySQL) │                                  │
+│                    │  Table: payments   │                                  │
+│                    │  Table: invoices   │                                  │
+│                    │  Table: notif...   │                                  │
+│                    │  Table: email_logs │                                  │
+│                    │  Table: idempotency                                   │
+│                    │         _keys      │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+│                    + EXTERNAL SERVICE                                      │
+│                    ┌────────────────────┐                                  │
+│                    │   STRIPE API       │                                  │
+│                    │  - Process payment │                                  │
+│                    │  - Webhook events  │                                  │
+│                    │  - Refund process  │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+│                    + EMAIL SERVICE                                         │
+│                    ┌────────────────────┐                                  │
+│                    │ Gmail SMTP Server  │                                  │
+│                    │  Send emails via   │                                  │
+│                    │ Spring Mail        │                                  │
+│                    └────────────────────┘                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                            END OF DOCUMENT
+================================================================================

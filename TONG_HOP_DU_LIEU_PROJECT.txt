@@ -1,0 +1,749 @@
+================================================================================
+                TỔNG HỢP DỮ LIỆU HỆ THỐNG ĐẶT PHÒNG KHÁCH SẠN
+                    (Hotel Booking Management System)
+================================================================================
+
+📌 THÔNG TIN CHUNG VỀ PROJECT
+
+Tên Dự Án:              Hệ Thống Đặt Phòng Khách Sạn - Microservices
+Mã Dự Án:              DH13C8_PTPMHDV
+Phiên Bản:             1.0.0
+Tên Hệ Thống:          Mois - Hotel Booking System
+Loại Dự Án:            Web Application - Microservices Architecture
+Nhóm Phát Triển:       DH13C8 Team
+
+Mục Tiêu Dự Án:
+- Xây dựng nền tảng đặt phòng khách sạn trực tuyến hiện đại
+- Sử dụng kiến trúc Microservices để đảm bảo khả năng mở rộng
+- Cung cấp giao diện người dùng thân thiện và responsive
+- Hỗ trợ các tính năng thanh toán và thông báo tự động
+- Quản lý đặt phòng, người dùng, khách sạn, thanh toán tập trung
+
+================================================================================
+📊 KIẾN TRÚC HỆ THỐNG
+================================================================================
+
+1. CẤU TRÚC MICROSERVICES
+
+Số Lượng Services:      6 Backend Services + 1 Frontend + 1 Database
+
+Backend Services:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. AUTH SERVICE (Port 8021)                                     │
+├─────────────────────────────────────────────────────────────────┤
+│ Chức Năng:  Xác thực, đăng ký, đăng nhập, cấp phát JWT token   │
+│ Công Nghệ:  Spring Boot, Spring Security, JJWT 0.11.5         │
+│ Database:   Users, RefreshTokens (trong khachsan)              │
+│ API:        /api/auth/register, /api/auth/login                │
+│ Bảo Mật:    JWT Token, Password Encryption (BCrypt)            │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. USER SERVICE (Port 8022)                                     │
+├─────────────────────────────────────────────────────────────────┤
+│ Chức Năng:  Quản lý hồ sơ người dùng, lịch sử đặt phòng        │
+│ Công Nghệ:  Spring Boot, Spring Data JPA                       │
+│ Database:   Users, UserProfile, BookingHistory (khachsan)      │
+│ API:        /api/users/me, /api/users/profile, /api/users/... │
+│ Quyền:      GUEST, STAFF, ADMIN                                │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. HOTEL-ROOM SERVICE (Port 8023)                              │
+├─────────────────────────────────────────────────────────────────┤
+│ Chức Năng:  Quản lý khách sạn, phòng, tiện nghi, tính sẵn có  │
+│ Công Nghệ:  Spring Boot, Spring Data JPA, Hibernate           │
+│ Database:   Hotels, Rooms, Amenities, RoomAvailability (khachsan)
+│ API:        /api/hotels, /api/rooms, /api/availability        │
+│ Tìm Kiếm:   Theo thành phố, ngày check-in/out, loại phòng    │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. BOOKING SERVICE (Port 8024)                                  │
+├─────────────────────────────────────────────────────────────────┤
+│ Chức Năng:  Tạo/sửa/hủy đặt phòng, quản lý trạng thái         │
+│ Công Nghệ:  Spring Boot, State Machine Pattern                 │
+│ Database:   Bookings, BookingDetails (khachsan)                │
+│ API:        /api/bookings (POST/GET/PUT/DELETE)               │
+│ Trạng Thái:  PENDING, CONFIRMED, CANCELLED, COMPLETED         │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. PAYMENT-NOTI SERVICE (Port 8025)                             │
+├─────────────────────────────────────────────────────────────────┤
+│ Chức Năng:  Xử lý thanh toán, hoàn tiền, gửi email thông báo  │
+│ Công Nghệ:  Spring Boot, Stripe SDK, Spring Mail              │
+│ Database:   Payments, Invoices, Notifications (khachsan)      │
+│ Thanh Toán:  Stripe (live mode), Mock mode                    │
+│ Email:      Gmail SMTP (konfigurable)                          │
+│ API:        /api/payments, /api/invoices, /api/notifications  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. API GATEWAY (Port 8020)                                      │
+├─────────────────────────────────────────────────────────────────┤
+│ Chức Năng:  Routing, JWT validation, Rate limiting, Logging   │
+│ Công Nghệ:  Spring Cloud Gateway, WebFlux                     │
+│ Routes:     Chuyển hướng tới 5 services theo endpoint prefix   │
+│ Bảo Mật:    JWT Token Validation, Role-based Access Control   │
+│ Rate Limit: Hỗ trợ (configurable)                             │
+│ Logging:    Request/Response logging tập trung                │
+└─────────────────────────────────────────────────────────────────┘
+
+Frontend:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ REACT FRONTEND (Port 5173)                                      │
+├─────────────────────────────────────────────────────────────────┤
+│ Công Nghệ:  React 18, Vite, TailwindCSS, React Router         │
+│ Tính Năng:  Responsive design, Client-side routing             │
+│ API Client: Axios (kết nối với API Gateway)                   │
+│ Pages:      Home, Search, Booking, Payment, Profile, History   │
+│ Trang Đặc:  Hỗ trợ tiếng Việt (UTF-8)                        │
+└─────────────────────────────────────────────────────────────────┘
+
+Database:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ MySQL DATABASE (Port 3306)                                      │
+├─────────────────────────────────────────────────────────────────┤
+│ Phiên Bản:  MySQL 8.x
+│ Database:   khachsan
+│ Character:  utf8mb4_unicode_ci (hỗ trợ tiếng Việt)            │
+│ User:       khachsan (password: khachsan)                      │
+│ Root:       root (password: root)                              │
+│ Phương Pháp: Docker Container (mysql:latest)                  │
+└─────────────────────────────────────────────────────────────────┘
+
+================================================================================
+🗄️ CẤU TRÚC DATABASE
+================================================================================
+
+Tổng Số Bảng:          14 bảng
+Character Set:         utf8mb4
+Collation:            utf8mb4_unicode_ci
+
+Danh Sách Bảng:
+
+1. users
+   - id (BIGINT, Primary Key)
+   - username (VARCHAR 50, Unique)
+   - email (VARCHAR 100, Unique)
+   - password (VARCHAR 255)
+   - full_name (VARCHAR 100)
+   - phone (VARCHAR 20)
+   - avatar_url (VARCHAR 500)
+   - address (VARCHAR 300)
+   - role (ENUM: GUEST, STAFF, ADMIN)
+   - is_active (TINYINT)
+   - created_at, updated_at
+
+2. refresh_tokens
+   - id (BIGINT, Primary Key)
+   - user_id (BIGINT, Foreign Key -> users)
+   - token (VARCHAR 512)
+   - expires_at (DATETIME)
+   - revoked (TINYINT)
+   - created_at (DATETIME)
+
+3. hotels
+   - id (BIGINT, Primary Key)
+   - name (VARCHAR 200)
+   - description (TEXT)
+   - city (VARCHAR 100)
+   - address (VARCHAR 300)
+   - phone (VARCHAR 20)
+   - email (VARCHAR 100)
+   - website (VARCHAR 255)
+   - star_rating (DECIMAL 3,1)
+   - image_url (VARCHAR 500)
+   - created_at, updated_at
+
+4. amenities
+   - id (BIGINT, Primary Key)
+   - name (VARCHAR 100)
+   - icon (VARCHAR 100)
+   - description (VARCHAR 500)
+   - created_at
+
+5. hotel_amenities
+   - id (BIGINT, Primary Key)
+   - hotel_id (BIGINT, Foreign Key -> hotels)
+   - amenity_id (BIGINT, Foreign Key -> amenities)
+
+6. rooms
+   - id (BIGINT, Primary Key)
+   - hotel_id (BIGINT, Foreign Key -> hotels)
+   - room_number (VARCHAR 10)
+   - room_type (VARCHAR 50)
+   - capacity (INT)
+   - price_per_night (DECIMAL 10,2)
+   - image_url (VARCHAR 500)
+   - description (TEXT)
+   - status (ENUM: AVAILABLE, OCCUPIED, MAINTENANCE)
+   - created_at, updated_at
+
+7. room_availability
+   - id (BIGINT, Primary Key)
+   - room_id (BIGINT, Foreign Key -> rooms)
+   - available_date (DATE)
+   - is_available (TINYINT)
+
+8. bookings
+   - id (BIGINT, Primary Key)
+   - user_id (BIGINT, Foreign Key -> users)
+   - hotel_id (BIGINT, Foreign Key -> hotels)
+   - room_id (BIGINT, Foreign Key -> rooms)
+   - check_in (DATE)
+   - check_out (DATE)
+   - num_guests (INT)
+   - num_nights (INT)
+   - status (ENUM: PENDING, CONFIRMED, CANCELLED, COMPLETED)
+   - created_at, updated_at
+
+9. booking_details
+   - id (BIGINT, Primary Key)
+   - booking_id (BIGINT, Foreign Key -> bookings)
+   - room_id (BIGINT, Foreign Key -> rooms)
+   - price_per_night (DECIMAL 10,2)
+   - num_rooms (INT)
+   - subtotal (DECIMAL 12,2)
+
+10. payments
+    - id (BIGINT, Primary Key)
+    - booking_id (BIGINT, Foreign Key -> bookings)
+    - user_id (BIGINT, Foreign Key -> users)
+    - amount (DECIMAL 12,2)
+    - currency (VARCHAR 3, default: VND)
+    - payment_method (ENUM: CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, WALLET)
+    - status (ENUM: PENDING, SUCCESS, FAILED, REFUNDED)
+    - stripe_payment_id (VARCHAR 255)
+    - created_at, updated_at
+
+11. invoices
+    - id (BIGINT, Primary Key)
+    - booking_id (BIGINT, Foreign Key -> bookings)
+    - payment_id (BIGINT, Foreign Key -> payments)
+    - subtotal (DECIMAL 12,2)
+    - tax_amount (DECIMAL 12,2)
+    - total_amount (DECIMAL 12,2)
+    - discount (DECIMAL 12,2)
+    - issued_date (DATETIME)
+    - due_date (DATETIME)
+
+12. notifications
+    - id (BIGINT, Primary Key)
+    - user_id (BIGINT, Foreign Key -> users)
+    - type (ENUM: BOOKING, PAYMENT, SYSTEM)
+    - subject (VARCHAR 255)
+    - message (TEXT)
+    - is_read (TINYINT)
+    - created_at
+
+13. email_logs
+    - id (BIGINT, Primary Key)
+    - recipient (VARCHAR 100)
+    - subject (VARCHAR 255)
+    - body (TEXT)
+    - status (ENUM: SENT, FAILED)
+    - sent_at (DATETIME)
+
+14. audit_logs
+    - id (BIGINT, Primary Key)
+    - user_id (BIGINT, Foreign Key -> users)
+    - action (VARCHAR 255)
+    - entity_type (VARCHAR 50)
+    - entity_id (BIGINT)
+    - changes (JSON)
+    - created_at (DATETIME)
+
+================================================================================
+💻 CÔNG NGHỆ & PHẦN MỀM
+================================================================================
+
+Backend:
+- Framework:           Spring Boot 3.2.5
+- Build Tool:          Maven (pom.xml)
+- JDK Version:         17
+- Spring Cloud:        2023.0.1 (API Gateway)
+- ORM:                 Hibernate (Spring Data JPA)
+- Security:            Spring Security + JJWT 0.11.5
+- Email:               Spring Mail (SMTP)
+- Payment:             Stripe SDK 24.16.0
+- Validation:          Hibernate Validator
+- Logging:             SLF4J + Logback
+- Database Driver:     MySQL Connector J
+
+Frontend:
+- Framework:           React 18.2.0
+- Build Tool:          Vite 5.0.0
+- CSS Framework:       TailwindCSS 3.3.0
+- Routing:             React Router DOM 6.18.0
+- HTTP Client:         Axios 1.6.0
+- UI Components:       Lucide React 0.302.0
+- Post Processing:     Autoprefixer, Terser (minify)
+
+Database:
+- DBMS:                MySQL 8.x
+- Charset:             utf8mb4 (Unicode support)
+- Collation:           utf8mb4_unicode_ci
+- UI Tool:             phpMyAdmin (optional)
+
+DevOps:
+- Containerization:    Docker
+- Orchestration:       Docker Compose
+- Port Mapping:        8020-8025 (Backend), 5173 (Frontend), 3306 (DB)
+
+================================================================================
+🔐 BẢOMẶT & AUTHENTICATION
+================================================================================
+
+Phương Pháp Xác Thực:   JWT (JSON Web Token)
+
+Token Details:
+- Algorithm:           HS256 (HMAC with SHA-256)
+- Secret Key:          dh13c8-khachsan-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+- Access Token TTL:    900,000 ms (15 minutes)
+- Refresh Token TTL:   604,800,000 ms (7 days)
+
+Mã Hóa Mật Khẩu:       BCrypt (Spring Security)
+
+Vai Trò & Quyền:
+- GUEST:               Xem danh sách khách sạn, tìm kiếm, đặt phòng
+- STAFF:               Quản lý phòng, xem đặt phòng, xử lý thanh toán
+- ADMIN:               Tất cả quyền, quản lý toàn hệ thống
+
+API Authentication:
+- Header:              Authorization: Bearer {JWT_TOKEN}
+- Validation:          JWT Token được validate tại API Gateway
+- Protected Routes:    Tất cả endpoint /api/** (except public)
+- Public Routes:       /api/auth/register, /api/auth/login, /api/hotels/**
+
+================================================================================
+📋 DANH SÁCH CÁC API ENDPOINT CHÍNH
+================================================================================
+
+PUBLIC ENDPOINTS (Không cần JWT):
+
+Authentication:
+  POST   /api/auth/register              - Đăng ký tài khoản mới
+  POST   /api/auth/login                 - Đăng nhập
+  POST   /api/auth/refresh-token         - Cập nhật token
+
+Hotels:
+  GET    /api/hotels                     - Danh sách tất cả khách sạn
+  GET    /api/hotels?city={city}         - Tìm khách sạn theo thành phố
+  GET    /api/hotels/{id}                - Chi tiết khách sạn
+  GET    /api/hotels/{id}/rooms          - Danh sách phòng của khách sạn
+  GET    /api/rooms/{id}/availability    - Kiểm tra phòng trống
+
+PROTECTED ENDPOINTS (Cần JWT token):
+
+User Profile:
+  GET    /api/users/me                   - Thông tin người dùng hiện tại
+  GET    /api/users/{id}                 - Thông tin người dùng khác
+  PUT    /api/users/me                   - Cập nhật hồ sơ cá nhân
+  PUT    /api/users/me/password          - Đổi mật khẩu
+
+Bookings:
+  GET    /api/bookings                   - Danh sách đặt phòng của người dùng
+  GET    /api/bookings/{id}              - Chi tiết đặt phòng
+  POST   /api/bookings                   - Tạo đặt phòng mới
+  PUT    /api/bookings/{id}              - Cập nhật đặt phòng
+  DELETE /api/bookings/{id}              - Hủy đặt phòng
+
+Payments:
+  GET    /api/payments                   - Danh sách thanh toán
+  POST   /api/payments                   - Tạo thanh toán
+  GET    /api/payments/{id}              - Chi tiết thanh toán
+  POST   /api/payments/{id}/refund       - Hoàn tiền
+
+Invoices:
+  GET    /api/invoices                   - Danh sách hóa đơn
+  GET    /api/invoices/{id}              - Tải hóa đơn
+  POST   /api/invoices/{id}/send         - Gửi hóa đơn qua email
+
+Notifications:
+  GET    /api/notifications              - Danh sách thông báo
+  PUT    /api/notifications/{id}/read    - Đánh dấu đã đọc
+  DELETE /api/notifications/{id}         - Xóa thông báo
+
+================================================================================
+📦 CẤU TRÚC THƯ MỤC DỰ ÁN
+================================================================================
+
+DH13C8_PTPMHDV/
+│
+├── auth-service/                    (Authentication Service)
+│   ├── src/main/java/...
+│   ├── src/main/resources/
+│   │   ├── application.properties
+│   │   └── application.yml
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── user-service/                    (User Management Service)
+│   ├── src/main/java/...
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── hotel-room-service/              (Hotel & Room Service)
+│   ├── src/main/java/...
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── booking-service/                 (Booking Management Service)
+│   ├── src/main/java/...
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── payment-noti-service/            (Payment & Notification Service)
+│   ├── src/main/java/...
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── api-gateway/                     (API Gateway)
+│   ├── src/main/java/...
+│   ├── pom.xml
+│   └── Dockerfile
+│
+├── frontend/                        (React Frontend)
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── index.html
+│
+├── database/
+│   ├── schema.sql                   (Tạo database và bảng)
+│   ├── data.sql                     (Dữ liệu mẫu)
+│   └── GenHash.java                (Công cụ mã hóa password)
+│
+├── .env                             (Biến môi trường)
+├── .env.example                     (Template biến môi trường)
+├── docker-compose.yml               (Cấu hình Docker Compose)
+├── docker-compose.override.yml      (Override cho development)
+├── run-all.ps1                      (Script chạy tất cả services)
+├── run-all.bat                      (Script batch for Windows)
+├── README.md                        (Hướng dẫn chính)
+└── QUICK_START.txt                 (Hướng dẫn nhanh)
+
+================================================================================
+🚀 HƯỚNG DẪN CHẠY DỰ ÁN
+================================================================================
+
+OPTION 1: CHẠY VỚI DOCKER (Recommended)
+
+Bước 1: Chuẩn bị môi trường
+  $ cp .env.example .env
+  (Chỉnh sửa .env nếu cần)
+
+Bước 2: Khởi động tất cả services
+  $ docker-compose up -d
+
+Bước 3: Kiểm tra trạng thái
+  $ docker-compose ps
+
+Bước 4: Truy cập ứng dụng
+  - Frontend:    http://localhost:5173
+  - API Gateway: http://localhost:8020
+  - MySQL:       localhost:3306
+
+Bước 5: Dừng services
+  $ docker-compose down
+
+OPTION 2: CHẠY LOCAL (Development)
+
+Bước 1: Khởi động MySQL
+  (Cài đặt MySQL 8.x và khởi động service)
+
+Bước 2: Tạo database
+  $ mysql -u root -p
+  $ source database/schema.sql
+  $ source database/data.sql
+
+Bước 3: Chạy các backend services (trong IntelliJ hoặc terminal)
+  Terminal 1: $ cd auth-service && .\mvnw.cmd spring-boot:run
+  Terminal 2: $ cd user-service && .\mvnw.cmd spring-boot:run
+  Terminal 3: $ cd hotel-room-service && .\mvnw.cmd spring-boot:run
+  Terminal 4: $ cd booking-service && .\mvnw.cmd spring-boot:run
+  Terminal 5: $ cd payment-noti-service && .\mvnw.cmd spring-boot:run
+  Terminal 6: $ cd api-gateway && .\mvnw.cmd spring-boot:run
+
+Bước 4: Chạy frontend
+  $ cd frontend
+  $ npm install
+  $ npm run dev
+
+Bước 5: Truy cập ứng dụng
+  - Frontend:    http://localhost:5173
+  - API Gateway: http://localhost:8020
+
+OPTION 3: CHẠY TOÀN BỘ TỪ SCRIPT (Windows)
+
+  $ .\run-all.ps1
+
+(Script sẽ tự động khởi động tất cả services trong các cửa sổ riêng)
+
+================================================================================
+👥 TÀI KHOẢN MẪU CHO TESTING
+================================================================================
+
+Admin Account:
+  Username:   admin
+  Password:   Admin@123
+  Email:      admin@khachsan.vn
+  Role:       ADMIN
+
+Staff Account:
+  Username:   staff01
+  Password:   Admin@123
+  Email:      staff@khachsan.vn
+  Role:       STAFF
+
+Guest Account:
+  Username:   guest01
+  Password:   Admin@123
+  Email:      guest@khachsan.vn
+  Role:       GUEST
+
+Test Account:
+  Username:   testuser
+  Password:   TestPass123!
+  Email:      test@example.com
+  Role:       GUEST
+
+(Tạo tài khoản mới qua endpoint: POST /api/auth/register)
+
+================================================================================
+📝 BIẾN MÔI TRƯỜNG (.env)
+================================================================================
+
+Database Configuration:
+  DB_ROOT_PASSWORD=root
+  DB_NAME=khachsan
+  DB_USER=khachsan
+  DB_PASSWORD=khachsan
+  DB_HOST=mysql
+  DB_PORT=3306
+
+JWT Configuration:
+  JWT_SECRET=dh13c8-khachsan-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+  JWT_EXPIRATION=3600
+
+Email Configuration:
+  MAIL_HOST=smtp.gmail.com
+  MAIL_PORT=587
+  MAIL_USERNAME=dh13c8.khachsan@gmail.com
+  MAIL_PASSWORD=app-password-from-gmail
+  MAIL_FROM=dh13c8.khachsan@gmail.com
+  MAIL_ALLOW_MOCK_FALLBACK=true
+
+Stripe Payment Configuration:
+  STRIPE_API_KEY=sk_test_your_stripe_secret_key
+  STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_public_key
+  STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+  STRIPE_CURRENCY=vnd
+
+Service URLs:
+  AUTH_SERVICE_URL=http://auth-service:8021
+  USER_SERVICE_URL=http://user-service:8022
+  HOTEL_ROOM_SERVICE_URL=http://hotel-room-service:8023
+  BOOKING_SERVICE_URL=http://booking-service:8024
+  PAYMENT_SERVICE_URL=http://payment-noti-service:8025
+  API_GATEWAY_URL=http://api-gateway:8020
+
+Frontend URL:
+  VITE_API_URL=http://api-gateway:8020
+
+Logging Configuration:
+  LOG_LEVEL=INFO
+  SPRING_JPA_SHOW_SQL=false
+
+Feature Flags:
+  ENABLE_STRIPE_PAYMENT=false
+  ENABLE_ANALYTICS=false
+  ENABLE_CACHE=true
+
+Docker Configuration:
+  COMPOSE_PROJECT_NAME=khachsan-hotel-booking
+  ENVIRONMENT=development
+
+================================================================================
+✅ TÍNH NĂNG CHỦ ĐẠO CỦA HỆ THỐNG
+================================================================================
+
+1. Quản Lý Người Dùng
+   ✓ Đăng ký, đăng nhập, đổi mật khẩu
+   ✓ Hồ sơ cá nhân, upload avatar
+   ✓ Quản lý địa chỉ giao hàng/thanh toán
+   ✓ Lịch sử đặt phòng
+   ✓ Wishlist yêu thích
+
+2. Tìm Kiếm & Lọc
+   ✓ Tìm kiếm theo thành phố, khoảng ngày
+   ✓ Lọc theo loại phòng, giá, rating
+   ✓ Sắp xếp: giá (tăng/giảm), rating, phổ biến
+   ✓ Xem chi tiết khách sạn, phòng, tiện nghi
+   ✓ Kiểm tra sẵn có ngày cụ thể
+
+3. Đặt Phòng & Quản Lý Booking
+   ✓ Tạo đặt phòng (đơn/nhiều phòng)
+   ✓ Tính toán giá (số đêm, giá mỗi đêm, thuế)
+   ✓ Chỉnh sửa đặt phòng (chưa thanh toán)
+   ✓ Hủy đặt phòng (với hoàn tiền nếu thỏa điều kiện)
+   ✓ Quản lý trạng thái: PENDING, CONFIRMED, CANCELLED, COMPLETED
+
+4. Thanh Toán
+   ✓ Thanh toán qua thẻ tín dụng/ghi nợ (Stripe)
+   ✓ Thanh toán qua chuyển khoản ngân hàng
+   ✓ Hoàn tiền tự động khi hủy đặt phòng
+   ✓ Hóa đơn điện tử (PDF download)
+   ✓ Lịch sử thanh toán chi tiết
+
+5. Thông Báo & Email
+   ✓ Xác nhận đặt phòng qua email
+   ✓ Nhắc nhở check-in 1 ngày trước
+   ✓ Thông báo hoàn tiền
+   ✓ Thông báo thanh toán thành công/thất bại
+   ✓ Hệ thống thông báo in-app
+
+6. Quản Lý Admin/Staff
+   ✓ Quản lý khách sạn (thêm/sửa/xóa)
+   ✓ Quản lý phòng (cập nhật giá, trạng thái)
+   ✓ Xem tất cả đặt phòng, thanh toán
+   ✓ Xem báo cáo doanh thu
+   ✓ Quản lý người dùng
+
+================================================================================
+🧪 TESTING & QUALITY ASSURANCE
+================================================================================
+
+Unit Testing:
+- Spring Boot Test Framework
+- Mockito for mocking
+- JUnit 5 (Jupiter)
+- Test Coverage: Controllers, Services, Repositories
+
+Integration Testing:
+- Spring Boot Integration Tests
+- H2 in-memory database for tests
+- Test containers (optional)
+
+E2E Testing:
+- Automated test scripts (PowerShell/Bash)
+- API testing with Curl/Postman
+- Frontend testing with manual scenarios
+
+API Testing Tools:
+- Postman (recommended)
+- Curl (command line)
+- Swagger/OpenAPI (if enabled)
+
+================================================================================
+📊 HIỆU SUẤT & SCALABILITY
+================================================================================
+
+Database Optimization:
+- Indexed columns for fast queries
+- Connection pooling (HikariCP)
+- Query optimization for search results
+
+Caching:
+- Optional Redis integration ready
+- Cache configuration in properties
+
+Load Balancing:
+- API Gateway can route to multiple instances
+- Docker Compose can scale services
+
+Monitoring:
+- Application logs via SLF4J
+- Database performance monitoring
+- API response time tracking
+
+Security:
+- SQL Injection prevention (Parameterized queries)
+- XSS prevention (Output encoding)
+- CSRF protection via Spring Security
+- Rate limiting at Gateway level
+
+================================================================================
+📈 PHÁT TRIỂN & MỞ RỘNG TƯƠNG LAI
+================================================================================
+
+Những tính năng có thể mở rộng:
+
+1. Analytics & Reporting
+   - Dashboard doanh thu
+   - Báo cáo đặt phòng theo thời gian
+   - Phân tích hành vi người dùng
+   - Export Excel/PDF
+
+2. Advanced Features
+   - Review & Rating
+   - Loyalty Program
+   - Promotion & Discount Codes
+   - Multi-language Support
+   - Multi-currency Support
+
+3. Mobile App
+   - React Native / Flutter
+   - Push Notifications
+   - Offline Booking
+   - Mobile Payment
+
+4. AI/ML Features
+   - Recommendation Engine
+   - Price Prediction
+   - Demand Forecasting
+   - Chatbot Support
+
+5. Integration
+   - Payment Gateway (Momo, VNPay, etc)
+   - SMS Notifications (Twilio)
+   - Video Conferencing (Jitsi)
+   - Third-party Hotel Systems
+
+6. DevOps Enhancement
+   - Kubernetes Deployment
+   - CI/CD Pipeline (GitHub Actions, Jenkins)
+   - Infrastructure as Code (Terraform)
+   - Monitoring Stack (Prometheus, Grafana)
+   - ELK Stack (Elasticsearch, Logstash, Kibana)
+
+================================================================================
+📞 HỖ TRỢ & LIÊN HỆ
+================================================================================
+
+Repository:
+  https://github.com/NguyennBaViet/DH13C8_PTPMHDV
+
+Documentation:
+  README.md            - Hướng dẫn chính
+  QUICK_START.txt      - Hướng dẫn nhanh
+  API Endpoints        - Danh sách API
+  .env.example         - Cấu hình mẫu
+
+Troubleshooting:
+  - Kiểm tra logs: docker-compose logs service-name
+  - Kiểm tra port: netstat -an | findstr :PORT
+  - Restart services: docker-compose restart
+
+Version History:
+  v1.0.0 (Current) - Initial Release
+    - 6 Microservices
+    - React Frontend
+    - MySQL Database
+    - Docker Support
+    - JWT Authentication
+
+================================================================================
+                            END OF DOCUMENT
+================================================================================

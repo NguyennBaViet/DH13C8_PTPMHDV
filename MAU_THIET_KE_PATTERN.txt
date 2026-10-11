@@ -1,0 +1,1015 @@
+================================================================================
+                    SƠ ĐỒ CÁC MẪU THIẾT KỀ (DESIGN PATTERNS)
+                    Hotel Booking Microservices v1.0
+================================================================================
+
+================================================================================
+1. MVC PATTERN - MODEL VIEW CONTROLLER
+================================================================================
+
+Cấu Trúc MVC trong Mỗi Service:
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                         USER REQUEST (HTTP)                         │
+│                                                                       │
+│                     API Gateway (Port 8020)                         │
+│                                                                       │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  /api/users/me → Route to User Service (Port 8022)          │  │
+│   │  /api/hotels   → Route to Hotel-Room Service (Port 8023)    │  │
+│   │  /api/bookings → Route to Booking Service (Port 8024)       │  │
+│   │  /api/payments → Route to Payment Service (Port 8025)       │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│                   EACH SERVICE - MVC ARCHITECTURE                      │
+│                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │                      LAYER 1: CONTROLLER                        │  │
+│  │                                                                  │  │
+│  │  @RestController                                                │  │
+│  │  @RequestMapping("/api/users")                                  │  │
+│  │  public class UserController {                                  │  │
+│  │      @Autowired UserService userService;                       │  │
+│  │                                                                  │  │
+│  │      @GetMapping("/me")                                         │  │
+│  │      public ResponseEntity<UserDTO> getMe() {                   │  │
+│  │          // 1. Validate JWT Token (from API Gateway)            │  │
+│  │          // 2. Get userId from token                            │  │
+│  │          // 3. Call UserService                                 │  │
+│  │          User user = userService.getUserById(userId);           │  │
+│  │          // 4. Convert to DTO                                   │  │
+│  │          return ResponseEntity.ok(userToDTO(user));             │  │
+│  │      }                                                           │  │
+│  │  }                                                               │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                  ↓                                     │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │                     LAYER 2: SERVICE (BUSINESS LOGIC)          │  │
+│  │                                                                  │  │
+│  │  @Service                                                        │  │
+│  │  public class UserService {                                      │  │
+│  │      @Autowired UserRepository userRepository;                  │  │
+│  │                                                                  │  │
+│  │      public User getUserById(Long userId) {                     │  │
+│  │          // 1. Validate input (userId > 0)                      │  │
+│  │          // 2. Check cache (Redis)                              │  │
+│  │          // 3. If not in cache → Query DB                       │  │
+│  │          User user = userRepository.findById(userId)            │  │
+│  │              .orElseThrow(() -> new UserNotFoundException());    │  │
+│  │          // 4. Check if active                                  │  │
+│  │          if (!user.isActive()) {                                │  │
+│  │              throw new UserInactiveException();                 │  │
+│  │          }                                                       │  │
+│  │          // 5. Cache result                                     │  │
+│  │          return user;                                            │  │
+│  │      }                                                            │  │
+│  │  }                                                                │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                  ↓                                     │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │                  LAYER 3: REPOSITORY (DATA ACCESS)             │  │
+│  │                                                                  │  │
+│  │  @Repository                                                     │  │
+│  │  public interface UserRepository                                 │  │
+│  │      extends JpaRepository<User, Long> {                        │  │
+│  │                                                                  │
+│  │      @Query("SELECT u FROM User u WHERE u.id = ?1                │  │
+│  │             AND u.isActive = true")                             │  │
+│  │      Optional<User> findActiveUserById(Long id);                │  │
+│  │                                                                  │  │
+│  │      @Query("SELECT u FROM User u WHERE u.username = ?1         │  │
+│  │             AND u.email = ?2")                                  │  │
+│  │      Optional<User> findByUsernameOrEmail(String username,       │  │
+│  │                                           String email);        │  │
+│  │  }                                                                │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                  ↓                                     │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │                  LAYER 4: MODEL (ENTITY)                        │  │
+│  │                                                                  │  │
+│  │  @Entity                                                         │  │
+│  │  @Table(name = "users")                                         │  │
+│  │  public class User {                                             │  │
+│  │      @Id @GeneratedValue                                        │  │
+│  │      private Long id;                                            │  │
+│  │                                                                  │  │
+│  │      @Column(unique = true)                                     │  │
+│  │      private String username;                                    │  │
+│  │      private String email;                                       │  │
+│  │      private String password; // BCrypt encrypted                │  │
+│  │      private String fullName;                                    │  │
+│  │      private String role; // GUEST, STAFF, ADMIN                │  │
+│  │      private boolean isActive;                                   │  │
+│  │                                                                  │  │
+│  │      @OneToMany(mappedBy = "user")                              │  │
+│  │      private List<Booking> bookings; // Relationship             │  │
+│  │  }                                                                │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                  ↓                                     │
+│                          ┌────────────┐                               │
+│                          │  DATABASE  │                               │
+│                          │   MySQL    │                               │
+│                          └────────────┘                               │
+└────────────────────────────────────────────────────────────────────────┘
+
+Data Flow MVC:
+┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+│   Browser   │──────▶│  Controller │──────▶│   Service   │
+│   (Client)  │       │  (Request)  │       │  (Business) │
+└─────────────┘       └─────────────┘       └─────────────┘
+                            ▲                      │
+                            │                      ▼
+                      ┌─────────────┐       ┌─────────────┐
+                      │   View/DTO  │◀──────│ Repository  │
+                      │  (Response) │       │  (Queries)  │
+                      └─────────────┘       └─────────────┘
+                                                   │
+                                                   ▼
+                                            ┌─────────────┐
+                                            │  Database   │
+                                            └─────────────┘
+
+================================================================================
+2. STATE MACHINE PATTERN - BOOKING & PAYMENT LIFECYCLE
+================================================================================
+
+BOOKING STATE MACHINE:
+═════════════════════
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                         BOOKING STATES & TRANSITIONS                │
+└──────────────────────────────────────────────────────────────────────┘
+
+                              ┌──────────┐
+                              │  START   │
+                              └────┬─────┘
+                                   │ [User clicks "Book Now"]
+                                   ▼
+                        ┌──────────────────────┐
+                        │  PENDING             │
+                        │ (Waiting for Payment)│
+                        └──────────────────────┘
+                          │              ▲
+        ┌─────────────────┘              │
+        │ [Payment Success]      [Payment Timeout (24h)]
+        │                                │
+        ▼                                │
+    ┌──────────────────────┐             │
+    │  CONFIRMED           │◀────────────┘
+    │ (Booking Confirmed)  │
+    └──────┬───────────────┘
+           │
+    ┌──────┴──────┐
+    │             │
+    │ [Check-in]  │ [User Cancel]
+    │             │
+    ▼             ▼
+┌──────────┐  ┌────────────┐
+│COMPLETED │  │ CANCELLED  │
+│(Finished)│  │(Refunding) │
+└──────────┘  └────────────┘
+
+State Definitions:
+
+1. PENDING (Chờ Thanh Toán)
+   - Điều kiện vào: User click "Book Now"
+   - Hành động: Tạo booking record
+   - Timeout: 24 giờ (tự động cancel nếu không thanh toán)
+   - Có thể chỉnh sửa: ✓ Có
+   - Có thể hủy: ✓ Có
+   - Chuyển tiếp:
+     * → CONFIRMED (nếu thanh toán thành công)
+     * → CANCELLED (nếu hết timeout hoặc user hủy)
+
+2. CONFIRMED (Đã Xác Nhận)
+   - Điều kiện vào: Payment SUCCESS
+   - Hành động: 
+     * Gửi email xác nhận
+     * Giảm room availability
+     * Tạo hóa đơn
+   - Timeout: None
+   - Có thể chỉnh sửa: ✗ Không
+   - Có thể hủy: ✓ Có (tính hoàn tiền)
+   - Chuyển tiếp:
+     * → COMPLETED (khi quá check-out date)
+     * → CANCELLED (nếu user hủy)
+
+3. COMPLETED (Hoàn Thành)
+   - Điều kiện vào: Check-out date đã qua
+   - Hành động:
+     * Gửi email cảm ơn
+     * Tạo thông báo review
+     * Cập nhật thống kê
+   - Timeout: None
+   - Có thể chỉnh sửa: ✗ Không
+   - Có thể hủy: ✗ Không
+   - Chuyển tiếp: NONE (Terminal state)
+
+4. CANCELLED (Bị Hủy)
+   - Điều kiện vào: User hủy hoặc timeout
+   - Hành động:
+     * Tính toán hoàn tiền
+     * Gửi email thông báo
+     * Tăng room availability
+   - Timeout: None
+   - Có thể chỉnh sửa: ✗ Không
+   - Có thể hủy: ✗ Không
+   - Chuyển tiếp: NONE (Terminal state)
+
+State Machine Implementation (Java):
+
+@Entity
+public class Booking {
+    @Enumerated(EnumType.STRING)
+    private BookingStatus status;
+    
+    public void transitionTo(BookingStatus newStatus) {
+        // Validate transition
+        if (!isValidTransition(this.status, newStatus)) {
+            throw new InvalidStateTransitionException(
+                "Cannot transition from " + this.status + 
+                " to " + newStatus
+            );
+        }
+        
+        // Execute actions before state change
+        handleStateTransition(newStatus);
+        
+        // Update state
+        this.status = newStatus;
+    }
+    
+    private boolean isValidTransition(BookingStatus from, 
+                                      BookingStatus to) {
+        return VALID_TRANSITIONS.get(from).contains(to);
+    }
+}
+
+PAYMENT STATE MACHINE:
+══════════════════════
+
+                            ┌──────────┐
+                            │  START   │
+                            └────┬─────┘
+                                 │ [User submits payment]
+                                 ▼
+                      ┌──────────────────────┐
+                      │  PENDING             │
+                      │ (Processing Payment) │
+                      └──────────────────────┘
+                        │              ▲
+        ┌───────────────┘              │
+        │ [Stripe Success]    [Stripe Webhook Timeout (5min)]
+        │                             │
+        ▼                             │
+    ┌──────────────────────┐          │
+    │  SUCCESS             │◀─────────┘
+    │ (Payment Completed)  │
+    └──────┬───────────────┘
+           │
+      ┌────┴────┐
+      │          │
+      │          │ [User requests refund]
+      │          │
+      │          ▼
+      │      ┌──────────────┐
+      │      │  REFUNDING   │
+      │      │ (Processing) │
+      │      └──────┬───────┘
+      │             │
+      │             ▼
+      │         ┌──────────┐
+      ▼         │REFUNDED  │
+   ┌─────┐     └──────────┘
+   │ END │
+   └─────┘
+
+Payment States:
+
+1. PENDING
+   - Stripe request đang được xử lý
+   - Webhook chưa nhận được
+   - Timeout: 5 phút
+
+2. SUCCESS
+   - Stripe confirm thanh toán thành công
+   - Webhook received
+   - Booking được confirm
+
+3. FAILED
+   - Stripe reject thanh toán
+   - Webhook received
+   - User được thông báo lỗi
+
+4. REFUNDING
+   - Refund request đã gửi tới Stripe
+   - Chờ webhook confirm
+
+5. REFUNDED
+   - Refund thành công
+   - Tiền được hoàn lại user
+
+================================================================================
+3. API GATEWAY PATTERN - REQUEST ROUTING & CROSS-CUTTING CONCERNS
+================================================================================
+
+Architecture:
+
+┌────────────────────────────────────────────────────────────────────────┐
+│                            CLIENT/FRONTEND                             │
+│                         http://localhost:5173                          │
+└────────────────────────────────────┬─────────────────────────────────┘
+                                     │
+                    All API requests to /api/**
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                       API GATEWAY (Port 8020)                          │
+│                   Spring Cloud Gateway + WebFlux                       │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────┐     │
+│  │  1. REQUEST AUTHENTICATION LAYER                            │     │
+│  │  ┌────────────────────────────────────────────────────────┐ │     │
+│  │  │ - Extract JWT Token from Authorization header         │ │     │
+│  │  │ - Validate JWT signature & expiration                 │ │     │
+│  │  │ - Extract userId, roles from token                    │ │     │
+│  │  │ - Add to request headers for downstream services      │ │     │
+│  │  │ - Return 401 if invalid/expired                       │ │     │
+│  │  └────────────────────────────────────────────────────────┘ │     │
+│  └──────────────────────────────────────────────────────────────┘     │
+│                           ↓                                            │
+│  ┌──────────────────────────────────────────────────────────────┐     │
+│  │  2. LOGGING & MONITORING LAYER                              │     │
+│  │  ┌────────────────────────────────────────────────────────┐ │     │
+│  │  │ - Log request (method, endpoint, timestamp)           │ │     │
+│  │  │ - Track response time                                 │ │     │
+│  │  │ - Send metrics to monitoring (Prometheus)             │ │     │
+│  │  └────────────────────────────────────────────────────────┘ │     │
+│  └──────────────────────────────────────────────────────────────┘     │
+│                           ↓                                            │
+│  ┌──────────────────────────────────────────────────────────────┐     │
+│  │  3. RATE LIMITING LAYER                                     │     │
+│  │  ┌────────────────────────────────────────────────────────┐ │     │
+│  │  │ - Check rate limits (e.g., 100 req/min per user)      │ │     │
+│  │  │ - Return 429 if exceeded                              │ │     │
+│  │  │ - Track usage per user/IP                             │ │     │
+│  │  └────────────────────────────────────────────────────────┘ │     │
+│  └──────────────────────────────────────────────────────────────┘     │
+│                           ↓                                            │
+│  ┌──────────────────────────────────────────────────────────────┐     │
+│  │  4. REQUEST ROUTING LAYER                                   │     │
+│  │  ┌────────────────────────────────────────────────────────┐ │     │
+│  │  │ - Parse request path                                  │ │     │
+│  │  │ - Determine target service                            │ │     │
+│  │  │ - Forward request to appropriate service              │ │     │
+│  │  │                                                        │ │     │
+│  │  │ Routing Rules:                                         │ │     │
+│  │  │ /api/auth/**        → Auth Service (8021)             │ │     │
+│  │  │ /api/users/**       → User Service (8022)             │ │     │
+│  │  │ /api/hotels/**      → Hotel-Room Service (8023)       │ │     │
+│  │  │ /api/bookings/**    → Booking Service (8024)          │ │     │
+│  │  │ /api/payments/**    → Payment Service (8025)          │ │     │
+│  │  │ /api/notifications → Payment Service (8025)           │ │     │
+│  │  └────────────────────────────────────────────────────────┘ │     │
+│  └──────────────────────────────────────────────────────────────┘     │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+   │                   │                  │                  │             │
+   │ (8021)            │ (8022)           │ (8023)           │ (8025)     │
+   ▼                   ▼                  ▼                  ▼             ▼
+┌─────────┐      ┌──────────┐      ┌─────────────┐    ┌──────────┐  ┌─────────┐
+│   Auth  │      │  User    │      │Hotel-Room   │    │ Booking  │  │Payment- │
+│Service  │      │ Service  │      │ Service     │    │ Service  │  │ Noti    │
+│ (8021)  │      │ (8022)   │      │ (8023)      │    │ (8024)   │  │Service  │
+└─────────┘      └──────────┘      └─────────────┘    └──────────┘  │(8025)   │
+                                                                    └─────────┘
+
+API Gateway Configuration (application.yml):
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        # Auth Service Route
+        - id: auth-service
+          uri: http://localhost:8021
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - RewritePath=/api/auth/(?<path>.*), /$\{path}
+            - AuthenticationFilter
+            
+        # User Service Route
+        - id: user-service
+          uri: http://localhost:8022
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - RewritePath=/api/users/(?<path>.*), /$\{path}
+            - AuthenticationFilter
+            - RateLimitFilter
+            
+        # Hotel-Room Service Route
+        - id: hotel-room-service
+          uri: http://localhost:8023
+          predicates:
+            - Path=/api/hotels/**,/api/rooms/**
+          filters:
+            - RewritePath=/api/hotels/(?<path>.*), /$\{path}
+            - LoggingFilter
+            
+        # Booking Service Route
+        - id: booking-service
+          uri: http://localhost:8024
+          predicates:
+            - Path=/api/bookings/**
+          filters:
+            - RewritePath=/api/bookings/(?<path>.*), /$\{path}
+            - AuthenticationFilter
+            - RateLimitFilter
+            
+        # Payment Service Route
+        - id: payment-service
+          uri: http://localhost:8025
+          predicates:
+            - Path=/api/payments/**,/api/invoices/**,/api/notifications/**
+          filters:
+            - RewritePath=/api/payments/(?<path>.*), /$\{path}
+            - AuthenticationFilter
+            - RateLimitFilter
+
+Request Flow Through Gateway:
+
+1. Frontend Request
+   POST /api/auth/login
+   {
+     "username": "user",
+     "password": "pass"
+   }
+                        │
+                        ▼
+2. API Gateway receives → /api/auth/login
+   - Check if needs authentication: NO (public endpoint)
+   - Extract body
+   - Log request
+                        │
+                        ▼
+3. Gateway routes to Auth Service
+   - Rewrite path: /api/auth/login → /login
+   - Forward to http://localhost:8021/login
+                        │
+                        ▼
+4. Auth Service processes
+   - Validate credentials
+   - Generate JWT token
+   - Return response
+                        │
+                        ▼
+5. Gateway receives response from Auth Service
+   - Log response
+   - Record metrics
+   - Send back to client
+                        │
+                        ▼
+6. Frontend receives response
+   {
+     "accessToken": "eyJhbGc...",
+     "refreshToken": "eyJhbGc...",
+     "expiresIn": 900000
+   }
+
+================================================================================
+4. REPOSITORY PATTERN - DATA ACCESS ABSTRACTION
+================================================================================
+
+Repository Pattern Structure:
+
+┌────────────────────────────────────────────────────────────────────┐
+│                   SERVICE LAYER (Business Logic)                  │
+│                      BookingService.java                          │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  @Service                                                          │
+│  public class BookingService {                                     │
+│      @Autowired                                                    │
+│      private BookingRepository bookingRepository;                  │
+│                                                                    │
+│      public Booking createBooking(BookingRequest request) {        │
+│          // 1. Validate input                                     │
+│          validateBookingRequest(request);                         │
+│                                                                    │
+│          // 2. Create entity                                      │
+│          Booking booking = new Booking();                         │
+│          booking.setCheckIn(request.getCheckIn());                │
+│          booking.setCheckOut(request.getCheckOut());              │
+│          booking.setStatus(BookingStatus.PENDING);                │
+│                                                                    │
+│          // 3. Use repository to save                             │
+│          Booking savedBooking =                                   │
+│              bookingRepository.save(booking);                     │
+│                                                                    │
+│          // 4. Return result                                      │
+│          return savedBooking;                                      │
+│      }                                                             │
+│                                                                    │
+│      public List<Booking> getUserBookings(Long userId) {          │
+│          // Repository handles DB query                           │
+│          return bookingRepository.findByUserId(userId);           │
+│      }                                                             │
+│                                                                    │
+│      public Booking updateBooking(Long id,                        │
+│          BookingUpdateRequest request) {                          │
+│          // 1. Find booking                                       │
+│          Booking booking = bookingRepository.findById(id)         │
+│              .orElseThrow(() ->                                   │
+│                  new BookingNotFoundException());                  │
+│                                                                    │
+│          // 2. Validate state transition                          │
+│          if (booking.getStatus() != BookingStatus.PENDING) {      │
+│              throw new InvalidStateException();                   │
+│          }                                                         │
+│                                                                    │
+│          // 3. Update fields                                      │
+│          booking.setCheckIn(request.getCheckIn());                │
+│          booking.setCheckOut(request.getCheckOut());              │
+│                                                                    │
+│          // 4. Save via repository                                │
+│          return bookingRepository.save(booking);                  │
+│      }                                                             │
+│  }                                                                 │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────────────────┐
+│            REPOSITORY INTERFACE (Data Access Contract)            │
+│                   BookingRepository.java                          │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  @Repository                                                       │
+│  public interface BookingRepository                               │
+│      extends JpaRepository<Booking, Long> {                       │
+│                                                                    │
+│      // Find methods                                              │
+│      @Query("SELECT b FROM Booking b WHERE b.userId = ?1          │
+│             ORDER BY b.createdAt DESC")                           │
+│      List<Booking> findByUserId(Long userId);                     │
+│                                                                    │
+│      @Query("SELECT b FROM Booking b WHERE b.hotelId = ?1         │
+│             AND b.status = ?2")                                   │
+│      List<Booking> findByHotelAndStatus(Long hotelId,             │
+│                                        BookingStatus status);    │
+│                                                                    │
+│      // Custom query for date range                               │
+│      @Query("SELECT b FROM Booking b WHERE b.checkIn >= ?1        │
+│             AND b.checkOut <= ?2 AND b.status = 'CONFIRMED'")    │
+│      List<Booking> findBookingsInDateRange(LocalDate from,        │
+│                                           LocalDate to);         │
+│                                                                    │
+│      // Count methods                                             │
+│      long countByStatusAndCreatedAtBetween(                       │
+│          BookingStatus status,                                    │
+│          LocalDateTime startDate,                                 │
+│          LocalDateTime endDate);                                  │
+│                                                                    │
+│      // Exists check                                              │
+│      boolean existsByIdAndUserId(Long bookingId, Long userId);    │
+│  }                                                                 │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────────────────┐
+│              SPRING DATA JPA IMPLEMENTATION (Automatic)           │
+│              Generates SQL and manages transactions               │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  @Entity                                                           │
+│  @Table(name = "bookings")                                        │
+│  public class Booking {                                            │
+│      @Id @GeneratedValue(strategy = GenerationType.IDENTITY)      │
+│      private Long id;                                              │
+│                                                                    │
+│      @Column(nullable = false)                                    │
+│      private Long userId;                                          │
+│                                                                    │
+│      @Column(nullable = false)                                    │
+│      private Long hotelId;                                         │
+│                                                                    │
+│      @Column(nullable = false)                                    │
+│      private LocalDate checkIn;                                    │
+│                                                                    │
+│      @Column(nullable = false)                                    │
+│      private LocalDate checkOut;                                   │
+│                                                                    │
+│      @Enumerated(EnumType.STRING)                                │
+│      private BookingStatus status;                                │
+│                                                                    │
+│      @CreationTimestamp                                           │
+│      private LocalDateTime createdAt;                             │
+│                                                                    │
+│      @UpdateTimestamp                                             │
+│      private LocalDateTime updatedAt;                             │
+│  }                                                                 │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                      DATABASE (MySQL)                             │
+│                                                                    │
+│  CREATE TABLE bookings (                                          │
+│      id BIGINT PRIMARY KEY AUTO_INCREMENT,                        │
+│      user_id BIGINT NOT NULL,                                    │
+│      hotel_id BIGINT NOT NULL,                                   │
+│      check_in DATE NOT NULL,                                      │
+│      check_out DATE NOT NULL,                                     │
+│      status ENUM('PENDING','CONFIRMED','CANCELLED','COMPLETED') │
+│      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,               │
+│      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP                │
+│          ON UPDATE CURRENT_TIMESTAMP,                             │
+│      FOREIGN KEY (user_id) REFERENCES users(id),                  │
+│      FOREIGN KEY (hotel_id) REFERENCES hotels(id),                │
+│      INDEX idx_user_id (user_id),                                 │
+│      INDEX idx_status (status),                                   │
+│      INDEX idx_date_range (check_in, check_out)                   │
+│  );                                                                │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+Repository Pattern Benefits:
+
+✓ Separation of Concerns
+  - Business logic (Service) separate from data access (Repository)
+  - Easy to test (mock repository)
+
+✓ Abstraction
+  - Clients don't know about SQL
+  - Can switch database without changing service
+
+✓ Reusability
+  - Same repository can be used by multiple services
+  - Common query patterns defined once
+
+✓ Maintainability
+  - Central place to manage queries
+  - Easy to add indexes, optimize queries
+  - Testable with in-memory databases
+
+================================================================================
+5. WEBHOOK PATTERN + IDEMPOTENCY - STRIPE PAYMENT HANDLING
+================================================================================
+
+Webhook Flow:
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                   STRIPE PAYMENT PROCESSING                         │
+└──────────────────────────────────────────────────────────────────────┘
+
+Stage 1: Payment Request
+
+  Frontend                 API Gateway        Payment Service           Stripe
+     │                         │                    │                    │
+     │──Payment Info─────────▶│                     │                    │
+     │                        │──Payment Request──▶│                    │
+     │                        │                    │──Charge Request────▶│
+     │                        │                    │                    │ Process
+     │                        │                    │                    │ Payment
+     │◀──Pending Response─────│◀────PENDING────────│◀────PENDING────────│
+     │                        │                    │                    │
+
+Stage 2: Webhook Callback (Async)
+
+  Stripe sends webhook to Payment Service when payment completes:
+
+     Stripe                Payment Service          Database
+       │                         │                      │
+       │──Webhook Event────────▶│                      │
+       │  (charge.succeeded)    │ Idempotency Check   │
+       │                        ├─ Idempotency Key   │
+       │                        │  already processed? │
+       │                        │                      │
+       │                        ├─ If NEW:            │
+       │                        │  ├─ Verify signature│
+       │                        │  ├─ Validate amount │
+       │                        │  ├─ Update payment  ├─ UPDATE
+       │                        │  │  status: SUCCESS │
+       │                        │  ├─ Send ACK        │
+       │                        │  └─ Trigger booking │
+       │                        │     confirmation    │
+       │◀──ACK 200 OK──────────│                      │
+       │                        │
+
+Webhook Implementation:
+
+@RestController
+@RequestMapping("/api/webhooks")
+public class StripeWebhookController {
+    
+    @Autowired
+    private PaymentService paymentService;
+    
+    @Autowired
+    private IdempotencyService idempotencyService;
+    
+    // Store webhook events for deduplication
+    private Map<String, WebhookProcessingResult> 
+        processedWebhooks = new ConcurrentHashMap<>();
+    
+    @PostMapping("/stripe")
+    public ResponseEntity<Map<String, String>> 
+        handleStripeWebhook(
+            @RequestBody String payload,
+            @RequestHeader("Stripe-Signature") String signature) {
+        
+        try {
+            // 1. VERIFY WEBHOOK SIGNATURE
+            // Prevents fake webhooks
+            Event event = Webhook.constructEvent(
+                payload, 
+                signature, 
+                STRIPE_WEBHOOK_SECRET
+            );
+            
+            // 2. GET IDEMPOTENCY KEY
+            // Unique identifier for this webhook event
+            String idempotencyKey = event.getId();
+            
+            // 3. CHECK IF ALREADY PROCESSED (Idempotency)
+            if (idempotencyService.isAlreadyProcessed(
+                    idempotencyKey)) {
+                // Return same response as before
+                return ResponseEntity.ok(
+                    Map.of("status", "already_processed")
+                );
+            }
+            
+            // 4. PROCESS EVENT
+            switch (event.getType()) {
+                
+                case "charge.succeeded":
+                    handleChargeSucceeded(
+                        (Charge) event.getDataObjectDeserializer()
+                            .getObject()
+                            .orElse(null),
+                        idempotencyKey
+                    );
+                    break;
+                    
+                case "charge.failed":
+                    handleChargeFailed(
+                        (Charge) event.getDataObjectDeserializer()
+                            .getObject()
+                            .orElse(null),
+                        idempotencyKey
+                    );
+                    break;
+                    
+                case "charge.refunded":
+                    handleChargeRefunded(
+                        (Charge) event.getDataObjectDeserializer()
+                            .getObject()
+                            .orElse(null),
+                        idempotencyKey
+                    );
+                    break;
+            }
+            
+            // 5. MARK AS PROCESSED
+            idempotencyService.markAsProcessed(
+                idempotencyKey, 
+                "success"
+            );
+            
+            // 6. RETURN SUCCESS
+            return ResponseEntity.ok(
+                Map.of("status", "received")
+            );
+            
+        } catch (SignatureVerificationException e) {
+            // Invalid signature - possible attack
+            log.error("Invalid Stripe signature", e);
+            return ResponseEntity.status(401).build();
+        } catch (Exception e) {
+            log.error("Webhook processing error", e);
+            // Return 400 so Stripe retries
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    private void handleChargeSucceeded(
+            Charge charge, 
+            String idempotencyKey) {
+        
+        // Get payment from DB
+        Payment payment = paymentRepository
+            .findByStripeChargeId(charge.getId())
+            .orElseThrow(() -> 
+                new PaymentNotFoundException()
+            );
+        
+        // Update payment status
+        payment.setStatus(PaymentStatus.SUCCESS);
+        payment.setCompletedAt(LocalDateTime.now());
+        payment.setIdempotencyKey(idempotencyKey);
+        paymentRepository.save(payment);
+        
+        // Confirm associated booking
+        Booking booking = bookingRepository.findById(
+            payment.getBookingId()
+        ).orElseThrow();
+        
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+        
+        // Trigger notifications
+        notificationService.sendBookingConfirmation(booking);
+    }
+    
+    private void handleChargeFailed(
+            Charge charge, 
+            String idempotencyKey) {
+        
+        Payment payment = paymentRepository
+            .findByStripeChargeId(charge.getId())
+            .orElseThrow();
+        
+        payment.setStatus(PaymentStatus.FAILED);
+        payment.setFailureReason(charge.getFailureMessage());
+        payment.setIdempotencyKey(idempotencyKey);
+        paymentRepository.save(payment);
+        
+        // Keep booking as PENDING
+        // User can retry payment
+        
+        notificationService.sendPaymentFailed(payment);
+    }
+    
+    private void handleChargeRefunded(
+            Charge charge, 
+            String idempotencyKey) {
+        
+        Payment payment = paymentRepository
+            .findByStripeChargeId(charge.getId())
+            .orElseThrow();
+        
+        payment.setStatus(PaymentStatus.REFUNDED);
+        payment.setRefundedAt(LocalDateTime.now());
+        payment.setIdempotencyKey(idempotencyKey);
+        paymentRepository.save(payment);
+        
+        notificationService.sendRefundConfirmation(payment);
+    }
+}
+
+IDEMPOTENCY SERVICE:
+═══════════════════
+
+@Service
+public class IdempotencyService {
+    
+    @Autowired
+    private IdempotencyKeyRepository 
+        idempotencyKeyRepository;
+    
+    // Check if webhook already processed
+    public boolean isAlreadyProcessed(String key) {
+        return idempotencyKeyRepository
+            .existsByKeyAndStatus(key, "PROCESSED");
+    }
+    
+    // Mark webhook as processed
+    public void markAsProcessed(String key, String status) {
+        IdempotencyKey idempotencyKey = 
+            new IdempotencyKey();
+        idempotencyKey.setKey(key);
+        idempotencyKey.setStatus(status);
+        idempotencyKey.setProcessedAt(LocalDateTime.now());
+        idempotencyKeyRepository.save(idempotencyKey);
+    }
+    
+    // Cleanup old entries (older than 24 hours)
+    @Scheduled(cron = "0 0 * * * *") // Every hour
+    public void cleanupOldKeys() {
+        LocalDateTime cutoff = 
+            LocalDateTime.now().minusHours(24);
+        idempotencyKeyRepository
+            .deleteByProcessedAtBefore(cutoff);
+    }
+}
+
+Idempotency Benefits:
+
+✓ At-Least-Once Delivery
+  - Even if Stripe sends webhook multiple times
+  - Payment only processed once
+  - No duplicate charges
+
+✓ Reliability
+  - Network failures don't cause duplicate processing
+  - Safe to retry webhook handling
+
+✓ Data Consistency
+  - No race conditions
+  - Database stays consistent
+
+Webhook Retry Logic:
+
+If Payment Service doesn't return 200 OK, Stripe retries:
+- Immediately
+- 5 seconds later
+- 5 minutes later
+- 30 minutes later
+- 2 hours later
+- 5 hours later
+- 10 hours later
+- 24 hours later
+
+This ensures webhook eventually gets through.
+
+================================================================================
+6. COMPLETE ARCHITECTURE OVERVIEW
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│                     FRONTEND (React + Vite)                            │
+│                      localhost:5173                                    │
+│                                                                         │
+└─────────────────┬───────────────────────────────────────────────────────┘
+                  │ HTTPS
+                  │ All requests to /api/**
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     API GATEWAY PATTERN                                 │
+│                        Port 8020                                        │
+│                                                                         │
+│  ┌─ Authentication Filter (JWT Validation)                             │
+│  ├─ Authorization Filter (Role-Based Access)                           │
+│  ├─ Logging & Monitoring Filter                                        │
+│  ├─ Rate Limiting Filter                                               │
+│  ├─ Request/Response Rewriting                                         │
+│  └─ Router to appropriate service                                      │
+│                                                                         │
+└─────────────────┬────┬────────┬─────────────┬────────┬──────────────────┘
+        │         │    │        │             │        │
+        │         │    │        │             │        │
+   /auth/│  /users/│    │ /hotels/        /bookings/  /payments/
+        │         │    │        │             │        │
+        ▼         ▼    ▼        ▼             ▼        ▼
+
+   ┌─────┐   ┌──────┐ ┌─────┐ ┌──────┐  ┌────────┐ ┌────────┐
+   │ Auth│   │User  │ │Hotel│ │Hotel │  │Booking │ │Payment-│
+   │Serv│   │Serv  │ │Serv │ │Room  │  │ Serv   │ │ Noti   │
+   │ 8021    │ 8022 │ │ 8023│ │ 8023 │  │ 8024   │ │Serv    │
+   └─────┘   └──────┘ └─────┘ └──────┘  └────────┘ │ 8025   │
+                                                    └────────┘
+
+Each Service: MVC Pattern + Repository Pattern
+┌────────────────────────────────────┐
+│  CONTROLLER                        │
+│  @RestController                   │
+│  Handles HTTP requests             │
+├────────────────────────────────────┤
+│  SERVICE                           │
+│  Business Logic                    │
+├────────────────────────────────────┤
+│  REPOSITORY                        │
+│  Data Access Abstraction           │
+├────────────────────────────────────┤
+│  ENTITY / MODEL                    │
+│  Database mapping                  │
+└────────────────────────────────────┘
+           │
+           ▼
+    ┌────────────────┐
+    │   DATABASE     │
+    │  MySQL 3306    │
+    └────────────────┘
+
+Booking Service uses State Machine Pattern:
+┌─────────────┐
+│  State:     │
+│  PENDING ──▶CONFIRMED ──▶COMPLETED
+│     │            │
+│     └────▶CANCELLED
+│
+│ Each transition validates business rules
+└─────────────┘
+
+Payment Service uses Webhook + Idempotency Pattern:
+┌──────────────┐
+│ 1. Frontend  │──▶ Stripe
+│ 2. Stripe    │──▶ Webhook
+│ 3. Webhook   │──▶ Idempotency Check
+│              │──▶ Process or Skip
+│ 4. Database  │──▶ Update status
+└──────────────┘
+
+================================================================================
+                            END OF DOCUMENT
+================================================================================

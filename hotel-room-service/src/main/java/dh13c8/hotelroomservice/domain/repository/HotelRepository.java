@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface HotelRepository extends JpaRepository<Hotel, Long> {
 
@@ -26,4 +28,8 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
         @Param("maxStar") Integer maxStar,
         Pageable pageable
     );
+
+    /** DEBUG: Get all hotels without active filter */
+    @Query("SELECT h FROM Hotel h ORDER BY h.id")
+    List<Hotel> findAllOrdered();
 }

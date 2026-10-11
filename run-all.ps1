@@ -1,6 +1,7 @@
 # Script chạy toàn bộ hệ thống Khách Sạn (Backend Microservices + Frontend React)
 $env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
 $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
+$env:JAVA_TOOL_OPTIONS = "-Dfile.encoding=UTF-8"
 
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host "   KHOI DONG TOAN BO HE THONG HOTEL MICROSERVICES" -ForegroundColor Yellow
@@ -29,7 +30,7 @@ $services = @(
 
 foreach ($s in $services) {
     Write-Host "-> Dang khoi dong $($s.Name) tren Port $($s.Port)..." -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:JAVA_HOME='C:\Program Files\Java\jdk-17'; cd '$PWD\$($s.Name)'; .\mvnw.cmd spring-boot:run"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:JAVA_HOME='C:\Program Files\Java\jdk-17'; `$env:JAVA_TOOL_OPTIONS='-Dfile.encoding=UTF-8'; cd '$PWD\$($s.Name)'; .\mvnw.cmd spring-boot:run"
     Start-Sleep -Seconds 2
 }
 

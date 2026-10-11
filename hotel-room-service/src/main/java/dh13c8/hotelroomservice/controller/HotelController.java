@@ -68,6 +68,12 @@ public class HotelController {
         return ResponseEntity.noContent().build();
     }
 
+    /** DEBUG ONLY: GET /api/hotels/debug/all – show ALL hotels including inactive */
+    @GetMapping("/debug/all")
+    public ResponseEntity<?> debugAllHotels() {
+        return ResponseEntity.ok(hotelService.getAllHotelsIncludingInactive());
+    }
+
     private Long extractUserId(Principal principal) {
         if (principal instanceof UsernamePasswordAuthenticationToken auth) {
             return (Long) auth.getCredentials();
