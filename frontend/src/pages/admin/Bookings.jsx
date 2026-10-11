@@ -15,14 +15,14 @@ export default function AdminBookings() {
   const loadAllBookings = async () => {
     setLoading(true)
     try {
-      const res = await bookingService.getAllBookings(0, 100)
+      const res = await bookingService.getPendingBookings(0, 100)
       if (res.success) {
         setBookings(res.data || [])
       } else {
-        console.error('Error fetching admin bookings:', res.error)
+        console.error('Error fetching pending bookings:', res.error)
       }
     } catch (err) {
-      console.error('Failed to load admin bookings:', err)
+      console.error('Failed to load pending bookings:', err)
     } finally {
       setLoading(false)
     }

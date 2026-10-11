@@ -33,6 +33,9 @@ public class Booking {
     @Column(name = "hotel_name", length = 255)
     private String hotelName;
 
+    @Column(name = "room_id", nullable = true)
+    private Long roomId;
+
     @Column(name = "room_type_id", nullable = false)
     private Long roomTypeId;
 

@@ -60,6 +60,7 @@ export default function Payment() {
       // 1. Tạo booking trên backend booking-service
       const bookingPayload = {
         hotelId: Number(bookingData.hotelId || 1),
+        roomId: Number(bookingData.roomId || bookingId || 1),
         roomTypeId: Number(bookingData.roomId || bookingId || 1),
         checkIn: bookingData.checkIn,
         checkOut: bookingData.checkOut,

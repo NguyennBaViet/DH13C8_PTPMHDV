@@ -20,6 +20,8 @@ public interface BookingService {
 
     Page<BookingResponse> getAllBookings(Pageable pageable);
 
+    Page<BookingResponse> getPendingBookings(Pageable pageable);
+
     BookingResponse updateBooking(Long bookingId, Long userId, UpdateBookingRequest req);
 
     BookingResponse cancelBooking(Long bookingId, Long userId, String role, String reason);

@@ -59,6 +59,13 @@ export default function Booking() {
         if (isMounted) {
           if (roomData) {
             setRoom(roomData)
+            // Nếu số khách vượt quá sức chứa, reset về sức chứa
+            if (formData.guests > roomData.capacity) {
+              setFormData(prev => ({
+                ...prev,
+                guests: roomData.capacity
+              }))
+            }
           } else {
             setError('Không tìm thấy phòng yêu cầu')
           }
@@ -385,10 +392,11 @@ export default function Booking() {
                     onChange={handleChange}
                     className="form-input"
                   >
-                    <option value="1">1 Khách</option>
-                    <option value="2">2 Khách</option>
-                    <option value="3">3 Khách</option>
-                    <option value="4">4+ Khách</option>
+                    {Array.from({ length: room?.capacity || 2 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1} Khách
+                      </option>
+                    ))}
                   </select>
                 </div>
 

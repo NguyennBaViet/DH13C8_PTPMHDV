@@ -62,7 +62,7 @@ public class HotelService {
                 .city(req.getCity())
                 .district(req.getDistrict())
                 .country(req.getCountry() != null ? req.getCountry() : "Vietnam")
-                .starRating(req.getStarRating())
+                .starRating(0)  // BỎ QUA starRating từ request, đặt mặc định 0
                 .phone(req.getPhone())
                 .email(req.getEmail())
                 .website(req.getWebsite())
@@ -90,7 +90,7 @@ public class HotelService {
         if (req.getCity()        != null) hotel.setCity(req.getCity());
         if (req.getDistrict()    != null) hotel.setDistrict(req.getDistrict());
         if (req.getCountry()     != null) hotel.setCountry(req.getCountry());
-        if (req.getStarRating()  != null) hotel.setStarRating(req.getStarRating());
+        // BỎ QUA starRating từ request - không cho phép update starRating trực tiếp
         if (req.getPhone()       != null) hotel.setPhone(req.getPhone());
         if (req.getEmail()       != null) hotel.setEmail(req.getEmail());
         if (req.getWebsite()     != null) hotel.setWebsite(req.getWebsite());

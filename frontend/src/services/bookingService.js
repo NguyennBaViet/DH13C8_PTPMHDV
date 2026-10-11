@@ -55,6 +55,25 @@ const bookingService = {
     }
   },
 
+  // Get pending bookings (Đơn Chưa Xử Lý)
+  getPendingBookings: async (page = 0, size = 100) => {
+    try {
+      const response = await api.get('/bookings/pending', {
+        params: { page, size }
+      })
+      const payload = response.data?.data || response.data
+      return {
+        success: true,
+        data: payload?.content || (Array.isArray(payload) ? payload : [])
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi lấy danh sách đơn chưa xử lý'
+      }
+    }
+  },
+
   // Get booking by ID
   getBookingById: async (bookingId) => {
     try {

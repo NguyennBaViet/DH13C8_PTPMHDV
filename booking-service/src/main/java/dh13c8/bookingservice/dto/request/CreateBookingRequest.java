@@ -11,6 +11,8 @@ public class CreateBookingRequest {
     @NotNull(message = "hotelId không được để trống")
     private Long hotelId;
 
+    private Long roomId;
+
     @NotNull(message = "roomTypeId không được để trống")
     private Long roomTypeId;
 

@@ -167,6 +167,7 @@ public class RoomService {
                 .floor(r.getFloor())
                 .capacity(r.getCapacity())
                 .pricePerNight(r.getPricePerNight())
+                .image(r.getImage())
                 .isActive(r.isActive())
                 .amenities(amenities)
                 .createdAt(r.getCreatedAt())

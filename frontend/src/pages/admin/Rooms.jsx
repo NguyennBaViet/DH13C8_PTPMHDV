@@ -98,10 +98,10 @@ export default function AdminRooms() {
 
   // Handle image URL
   const handleImageUrl = () => {
-    const url = prompt('Nhập đường dẫn ảnh:')
+    const url = prompt('Nhập đường dẫn ảnh (URL):')
     if (url && url.trim()) {
-      setImagePreview(url)
-      setFormData({...formData, image: url})
+      setImagePreview(url.trim())
+      setFormData({...formData, image: url.trim()})
     }
   }
 
@@ -320,7 +320,13 @@ export default function AdminRooms() {
                     Chọn File
                     <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                   </label>
-                  <button onClick={handleImageUrl} className="btn-secondary px-4 py-2">Dán URL</button>
+                  <button 
+                    type="button"
+                    onClick={handleImageUrl} 
+                    className="btn-secondary px-4 py-2"
+                  >
+                    Dán URL
+                  </button>
                 </div>
               </div>
             </div>

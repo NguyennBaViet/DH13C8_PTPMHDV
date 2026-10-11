@@ -41,6 +41,20 @@ public class BookingController {
     }
 
     // ============================================================
+    // PENDING BOOKINGS (Admin - Đơn Chưa Xử Lý)
+    // GET /api/bookings/pending
+    // ============================================================
+    @GetMapping("/pending")
+    public ResponseEntity<ApiResponse<Page<BookingResponse>>> getPendingBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<BookingResponse> result = bookingService.getPendingBookings(pageable);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    // ============================================================
     // 1. TẠO BOOKING MỚI
     // POST /api/bookings
     // ============================================================

@@ -120,6 +120,7 @@ public class BookingServiceImpl implements BookingService {
                 .userId(userId)
                 .hotelId(req.getHotelId())
                 .hotelName(roomType.getHotelName())
+                .roomId(req.getRoomId())
                 .roomTypeId(req.getRoomTypeId())
                 .roomTypeName(roomType.getName())
                 .checkIn(req.getCheckIn())
@@ -206,6 +207,12 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Page<BookingResponse> getAllBookings(Pageable pageable) {
         return bookingRepo.findAll(pageable)
+                .map(this::toResponse);
+    }
+
+    @Override
+    public Page<BookingResponse> getPendingBookings(Pageable pageable) {
+        return bookingRepo.findByStatusOrderByCreatedAtDesc(BookingStatus.PENDING, pageable)
                 .map(this::toResponse);
     }
 
