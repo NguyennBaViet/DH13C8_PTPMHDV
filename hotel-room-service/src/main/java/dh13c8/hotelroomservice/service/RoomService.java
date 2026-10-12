@@ -24,11 +24,13 @@ public class RoomService {
     private final AmenityRepository         amenityRepository;
     private final RoomAvailabilityRepository availabilityRepository;
 
-    // ── Danh sách tất cả phòng có phân trang ─────────────────────────────────
+    // ── Danh sách tất cả phòng có phân trang (bao gồm inactive - bảo trì) ─────
     @Transactional(readOnly = true)
     public Page<RoomResponse> getAllRooms(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
-        return roomRepository.findByIsActiveTrue(pageable).map(this::toResponse);
+        // Trả về TẤT CẢ phòng (cả active=true và active=false)
+        // Phòng inactive sẽ được hiển thị với trạng thái "Bảo trì" trong admin UI
+        return roomRepository.findAll(pageable).map(this::toResponse);
     }
 
     // ── Danh sách phòng theo khách sạn ───────────────────────────────────────
@@ -117,6 +119,18 @@ public class RoomService {
         if (req.getImage()       != null) room.setImage(req.getImage());
         if (req.getIsActive()    != null) room.setActive(req.getIsActive());
 
+        // Handle maintenance today flag
+        if (req.getMaintenanceToday() != null) {
+            room.setMaintenanceToday(req.getMaintenanceToday());
+        }
+
+        // Handle maintenance count increment
+        if (Boolean.TRUE.equals(req.getIncrementMaintenanceCount())) {
+            int currentCount = room.getMaintenanceCount() != null ? room.getMaintenanceCount() : 0;
+            room.setMaintenanceCount(currentCount + 1);
+            log.info("Phòng id={} - Tăng maintenance count lên: {}", id, currentCount + 1);
+        }
+
         if (req.getRoomType() != null) {
             try { room.setRoomType(Room.RoomType.valueOf(req.getRoomType().toUpperCase())); }
             catch (IllegalArgumentException e) {
@@ -169,6 +183,8 @@ public class RoomService {
                 .pricePerNight(r.getPricePerNight())
                 .image(r.getImage())
                 .isActive(r.isActive())
+                .maintenanceToday(r.isMaintenanceToday())
+                .maintenanceCount(r.getMaintenanceCount())
                 .amenities(amenities)
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())

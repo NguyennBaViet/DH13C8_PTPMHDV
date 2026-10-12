@@ -28,6 +28,9 @@ public class RoomResponse {
         return isActive;
     }
 
+    private boolean maintenanceToday;
+    private Integer maintenanceCount;
+
     private List<AmenityResponse> amenities;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

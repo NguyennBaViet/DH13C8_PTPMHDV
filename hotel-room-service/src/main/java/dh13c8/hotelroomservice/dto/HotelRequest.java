@@ -30,7 +30,7 @@ public class HotelRequest {
     @Min(1) @Max(5)
     private Integer starRating;
 
-    @Pattern(regexp = "^[0-9+\\-\\s()]{7,20}$", message = "Số điện thoại không hợp lệ")
+    @Pattern(regexp = "^\\d{10}$", message = "Số điện thoại phải là 10 chữ số")
     private String phone;
 
     @Email

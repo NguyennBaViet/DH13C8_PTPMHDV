@@ -121,8 +121,8 @@ Database:
 ================================================================================
 
 Tổng Số Bảng:          14 bảng
-Character Set:         utf8mb4
-Collation:            utf8mb4_unicode_ci
+Character Set:         utf8
+Collation:            utf8_general_ci
 
 Danh Sách Bảng:
 
@@ -192,15 +192,37 @@ Danh Sách Bảng:
 
 8. bookings
    - id (BIGINT, Primary Key)
+   - booking_code (VARCHAR 32, Unique)
    - user_id (BIGINT, Foreign Key -> users)
+   - room_id (BIGINT, Foreign Key -> rooms, Nullable)
+   - room_type_id (BIGINT)
    - hotel_id (BIGINT, Foreign Key -> hotels)
-   - room_id (BIGINT, Foreign Key -> rooms)
+   - hotel_name (VARCHAR 255)
+   - room_type_name (VARCHAR 255)
    - check_in (DATE)
    - check_out (DATE)
-   - num_guests (INT)
-   - num_nights (INT)
-   - status (ENUM: PENDING, CONFIRMED, CANCELLED, COMPLETED)
-   - created_at, updated_at
+   - nights (INT)
+   - rooms (INT)
+   - guests (INT)
+   - price_per_night (DECIMAL 15,2)
+   - sub_total (DECIMAL 15,2)
+   - tax_amount (DECIMAL 15,2)
+   - total_price (DECIMAL 15,2)
+   - status (VARCHAR 30)
+   - special_requests (VARCHAR 1000)
+   - contact_name (VARCHAR 150)
+   - contact_email (VARCHAR 150)
+   - contact_phone (VARCHAR 20)
+   - payment_id (BIGINT, Nullable)
+   - lock_expires_at (DATETIME, Nullable)
+   - cancelled_at (DATETIME, Nullable)
+   - cancel_reason (VARCHAR 500)
+   - cancellation_fee (DECIMAL 15,2)
+   - refund_amount (DECIMAL 15,2)
+   - cancel_admin_note (VARCHAR 500)
+   - version (BIGINT)
+   - created_at (DATETIME)
+   - updated_at (DATETIME)
 
 9. booking_details
    - id (BIGINT, Primary Key)
@@ -497,27 +519,33 @@ OPTION 3: CHẠY TOÀN BỘ TỪ SCRIPT (Windows)
 
 Admin Account:
   Username:   admin
-  Password:   Admin@123
   Email:      admin@khachsan.vn
+  Password:   Admin@123 (BCrypt: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lzmW)
   Role:       ADMIN
+  Status:     Active
 
 Staff Account:
   Username:   staff01
+  Email:      staff01@khachsan.vn
   Password:   Admin@123
-  Email:      staff@khachsan.vn
   Role:       STAFF
+  Status:     Active
 
-Guest Account:
-  Username:   guest01
+Guest Accounts:
+  Username:   guest01, guest02, guest03
+  Email:      guest01/02/03@gmail.com
   Password:   Admin@123
-  Email:      guest@khachsan.vn
   Role:       GUEST
+  Status:     Active
 
-Test Account:
-  Username:   testuser
-  Password:   TestPass123!
-  Email:      test@example.com
-  Role:       GUEST
+Dữ Liệu Mẫu Trong Database:
+  - Hotels:       5 khách sạn (Grand Palace, Sunrise Beach, Saigon Boutique, Hội An, Nha Trang)
+  - Rooms:        22 phòng (SINGLE, DOUBLE, TWIN, DELUXE, SUITE, FAMILY)
+  - Amenities:    15 tiện nghi
+  - Bookings:     5 đơn đặt phòng (PENDING, CONFIRMED, COMPLETED)
+  - Payments:     3 thanh toán (SUCCESS)
+  - Reviews:      3 đánh giá từ khách hàng
+  - Promotions:   6 mã khuyến mãi (WELCOME10, SUMMER25, SAVE200K, VIP500K, WEEKEND20, TETHOLIDAY)
 
 (Tạo tài khoản mới qua endpoint: POST /api/auth/register)
 
@@ -528,10 +556,12 @@ Test Account:
 Database Configuration:
   DB_ROOT_PASSWORD=root
   DB_NAME=khachsan
-  DB_USER=khachsan
-  DB_PASSWORD=khachsan
-  DB_HOST=mysql
+  DB_USER=root
+  DB_PASSWORD=root
+  DB_HOST=localhost
   DB_PORT=3306
+  DB_CHARSET=utf8
+  DB_COLLATION=utf8_general_ci
 
 JWT Configuration:
   JWT_SECRET=dh13c8-khachsan-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
@@ -560,7 +590,7 @@ Service URLs:
   API_GATEWAY_URL=http://api-gateway:8020
 
 Frontend URL:
-  VITE_API_URL=http://api-gateway:8020
+  VITE_API_URL=http://localhost:8021
 
 Logging Configuration:
   LOG_LEVEL=INFO
@@ -585,6 +615,10 @@ Docker Configuration:
    ✓ Quản lý địa chỉ giao hàng/thanh toán
    ✓ Lịch sử đặt phòng
    ✓ Wishlist yêu thích
+   ✓ Email Verification (Đang phát triển):
+     - Gửi email xác nhận khi đăng ký
+     - Xác nhận email trước khi đặt phòng
+     - Gửi email nhắc nhở xác nhận khi đặt phòng chưa verify
 
 2. Tìm Kiếm & Lọc
    ✓ Tìm kiếm theo thành phố, khoảng ngày
@@ -719,7 +753,37 @@ Những tính năng có thể mở rộng:
    - ELK Stack (Elasticsearch, Logstash, Kibana)
 
 ================================================================================
-📞 HỖ TRỢ & LIÊN HỆ
+� CÁC VẤNĐỀ ĐÃ FIX & CẬP NHẬT GẦN ĐÂY
+================================================================================
+
+Database Schema Issues (Fixed):
+  ✓ Thay đổi charset từ utf8mb4_unicode_ci → utf8_general_ci (theo yêu cầu)
+  ✓ Sửa tên cột bookings table: check_in_date → check_in, check_out_date → check_out
+  ✓ Thêm các cột mới cho bookings: room_type_id, hotel_name, room_type_name, payment_id, version
+  ✓ Loại bỏ cột cũ: num_guests, total_nights, promotion_id, room_price, discount_amount
+  ✓ Tạo migration script để xử lý foreign key constraints khi seeding dữ liệu
+
+Data Seeding Issues (Fixed):
+  ✓ Sửa lỗi TRUNCATE vs DELETE với foreign keys (sử dụng DELETE + SET FOREIGN_KEY_CHECKS = 0)
+  ✓ Reset AUTO_INCREMENT cho tất cả tables sau khi clear dữ liệu
+  ✓ Tạo file seed_all_data.sql tổng hợp với 5 hotels, 22 rooms, 5 users, bookings, payments, reviews, promotions
+
+Email Verification Feature (In Development):
+  ⚠ Feature chưa hoàn toàn implement
+  - Cần thêm: emailVerified, verificationToken fields vào User entity
+  - Cần implement: verifyEmail(), resendVerificationEmail() methods trong AuthService
+  - Cần tạo: RestClientConfig trong auth-service để gọi notification service
+  - Cần tạo: Email verification endpoints trong NotificationController
+  - Cần implement: sendWelcomeVerificationEmail() trong NotificationService
+  - Cần tạo: Frontend pages cho email verification flow
+
+Payment Integration:
+  ✓ Fix bookings table schema mismatch với Booking entity
+  ✓ Payments table ready untuk Stripe/MOCK mode
+  ✓ Payment flow: PENDING → SUCCESS → NOTIFICATION → BOOKING CONFIRMED
+
+================================================================================
+�📞 HỖ TRỢ & LIÊN HỆ
 ================================================================================
 
 Repository:

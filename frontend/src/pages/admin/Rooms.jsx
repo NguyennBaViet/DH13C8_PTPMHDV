@@ -130,6 +130,12 @@ export default function AdminRooms() {
       setLoading(true)
       const currentActive = room.isActive !== undefined ? room.isActive : (room.active !== undefined ? room.active : true)
       const newActive = !currentActive
+      
+      // Khi bấm nút "Hoạt động":
+      // - Nếu đang HOẠT ĐỘNG (isActive=true) → chuyển sang KHÔNG HOẠT ĐỘNG (isActive=false, bảo trì, maintenanceCount++)
+      // - Nếu đang KHÔNG HOẠT ĐỘNG (isActive=false) → chuyển sang HOẠT ĐỘNG (isActive=true, thoát bảo trì)
+      const willEnterMaintenance = newActive === false // Sắp vào bảo trì (đang bật, sắp tắt)
+      
       await roomService.updateRoom(room.id, {
         hotelId: room.hotelId,
         roomNumber: room.roomNumber,
@@ -139,7 +145,9 @@ export default function AdminRooms() {
         description: room.description,
         floor: room.floor,
         image: room.image,
-        isActive: newActive
+        isActive: newActive,
+        maintenanceToday: willEnterMaintenance,
+        incrementMaintenanceCount: willEnterMaintenance // Tăng counter chỉ khi vào bảo trì
       })
       await fetchRooms()
     } catch (err) {
@@ -255,7 +263,7 @@ export default function AdminRooms() {
     const active = room?.isActive !== undefined ? room.isActive : (room?.active !== undefined ? room.active : true)
     return active 
       ? <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-300">Hoạt động</span>
-      : <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-300">Không hoạt động</span>
+      : <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-300">Bảo trì</span>
   }
 
   return (
@@ -455,7 +463,6 @@ export default function AdminRooms() {
           </div>
         )}
 
-        {/* Thống kê nhanh tình trạng phòng */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="card-luxury p-4 text-center">
             <p className="text-xs text-primary-500 font-medium">Tổng Số Phòng</p>
@@ -471,9 +478,9 @@ export default function AdminRooms() {
             <p className="text-xs text-amber-700 font-medium">Đang Có Khách Hôm Nay</p>
             <p className="text-2xl font-bold text-amber-800 mt-1">{occupiedRoomIdsToday.size}</p>
           </div>
-          <div className="card-luxury p-4 text-center bg-gray-50 border border-gray-200">
-            <p className="text-xs text-gray-600 font-medium">Bảo Trì / Tạm Khóa</p>
-            <p className="text-2xl font-bold text-gray-700 mt-1">
+          <div className="card-luxury p-4 text-center bg-gray-50/50 border border-gray-200">
+            <p className="text-xs text-gray-700 font-medium">Phòng Bảo Trì / Không Hoạt Động</p>
+            <p className="text-2xl font-bold text-gray-800 mt-1">
               {rooms.filter(r => !(r.active ?? r.isActive ?? true)).length}
             </p>
           </div>
@@ -530,7 +537,11 @@ export default function AdminRooms() {
                       <td className="px-6 py-4">{(room.pricePerNight / 1000000).toFixed(1)}M VND</td>
                       <td className="px-6 py-4">{room.capacity} khách</td>
                       <td className="px-6 py-4">
-                        {!(room.active ?? room.isActive ?? true) ? (
+                        {room.maintenanceToday ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-300">
+                            Bảo trì
+                          </span>
+                        ) : !(room.active ?? room.isActive ?? true) ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-300">
                             Bảo trì
                           </span>

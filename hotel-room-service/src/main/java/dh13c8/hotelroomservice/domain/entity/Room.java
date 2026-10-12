@@ -46,6 +46,12 @@ public class Room {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Column(name = "maintenance_today", nullable = false)
+    private boolean maintenanceToday = false;
+
+    @Column(name = "maintenance_count", nullable = false)
+    private Integer maintenanceCount = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

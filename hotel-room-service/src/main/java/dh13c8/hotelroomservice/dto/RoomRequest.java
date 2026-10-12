@@ -41,5 +41,9 @@ public class RoomRequest {
         }
     }
 
+    private Boolean maintenanceToday;
+    
+    private Boolean incrementMaintenanceCount;
+
     private Set<Long> amenityIds;
 }
