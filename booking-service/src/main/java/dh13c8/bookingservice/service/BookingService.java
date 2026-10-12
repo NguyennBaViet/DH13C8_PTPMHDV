@@ -34,5 +34,9 @@ public interface BookingService {
 
     BookingResponse checkOut(Long bookingId, String role);
 
+    BookingResponse approveCancellation(Long bookingId, String role);
+
+    BookingResponse rejectCancellation(Long bookingId, String role, String reason);
+
     void releaseExpiredBookings();
 }

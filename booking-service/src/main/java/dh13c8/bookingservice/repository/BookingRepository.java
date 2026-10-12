@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,16 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByHotelIdOrderByCreatedAtDesc(Long hotelId, Pageable pageable);
 
     Page<Booking> findByStatusOrderByCreatedAtDesc(BookingStatus status, Pageable pageable);
+
+    @Query("SELECT b FROM Booking b WHERE b.userId = :userId " +
+            "AND b.roomTypeId = :roomTypeId " +
+            "AND b.checkIn = :checkIn " +
+            "AND b.checkOut = :checkOut")
+    List<Booking> findByUserIdAndRoomTypeIdAndCheckInAndCheckOut(
+            @Param("userId") Long userId,
+            @Param("roomTypeId") Long roomTypeId,
+            @Param("checkIn") LocalDate checkIn,
+            @Param("checkOut") LocalDate checkOut);
 
     @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' " +
             "AND b.lockExpiresAt IS NOT NULL AND b.lockExpiresAt < :now")

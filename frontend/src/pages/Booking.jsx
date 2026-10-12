@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom'
-import { MapPin, AlertCircle, CheckCircle, Calendar, User, Mail, Phone, FileText, ArrowLeft, BedDouble } from 'lucide-react'
+import { MapPin, AlertCircle, CheckCircle, Calendar, User, Mail, Phone, FileText, ArrowLeft, BedDouble, RefreshCw } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import roomService from '../services/roomService'
+import bookingService from '../services/bookingService'
 
 export default function Booking() {
   const { roomId } = useParams()
@@ -16,6 +17,8 @@ export default function Booking() {
 
   const [bookedDates, setBookedDates] = useState([])
   const [availabilityStatus, setAvailabilityStatus] = useState({ checking: false, available: null, message: '' })
+  const [pendingBooking, setPendingBooking] = useState(null)
+  const [cancellingPending, setCancellingPending] = useState(false)
 
   const [formData, setFormData] = useState({
     checkIn: location.state?.checkIn || '',
@@ -38,6 +41,25 @@ export default function Booking() {
       }))
     }
   }, [user])
+
+  // Kiểm tra xem user có đơn PENDING chưa thanh toán cho phòng này không
+  useEffect(() => {
+    if (!user || !roomId) {
+      setPendingBooking(null)
+      return
+    }
+
+    bookingService.getMyBookings(0, 10).then(res => {
+      if (res.success && Array.isArray(res.data)) {
+        const found = res.data.find(b => 
+          (b.roomTypeId === Number(roomId) || b.roomId === Number(roomId)) &&
+          b.status === 'PENDING' &&
+          !b.paymentId
+        )
+        setPendingBooking(found || null)
+      }
+    }).catch(() => {})
+  }, [user, roomId])
 
   // Tải thông tin phòng cố định theo roomId từ URL
   useEffect(() => {
@@ -187,6 +209,52 @@ export default function Booking() {
 
   const isRoomActive = room ? (room.isActive !== undefined ? room.isActive : (room.active !== undefined ? room.active : true)) : true
 
+  const handleCancelPendingBooking = async () => {
+    if (!pendingBooking) return
+    const confirmed = window.confirm(
+      'Bạn có chắc chắn muốn hủy đơn đặt phòng này? Phòng sẽ được giải phóng ngay lập tức để bạn có thể đặt lại.'
+    )
+    if (!confirmed) return
+
+    setCancellingPending(true)
+    try {
+      const res = await bookingService.cancelBooking(pendingBooking.id, 'Người dùng hủy đơn để đặt lại')
+      if (res.success) {
+        setPendingBooking(null)
+        // Refresh availability calendar & status
+        const nextTwoMonths = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        roomService.getAvailabilityCalendar(roomId, todayStr, nextTwoMonths).then(data => {
+          if (data && typeof data === 'object') {
+            const booked = Object.entries(data)
+              .filter(([_, status]) => status === 'BOOKED' || status === 'LOCKED')
+              .map(([date]) => date)
+              .sort()
+            setBookedDates(booked)
+          }
+        })
+        if (formData.checkIn && formData.checkOut) {
+          const availRes = await roomService.checkAvailability(roomId, formData.checkIn, formData.checkOut)
+          if (availRes && availRes.available) {
+            setAvailabilityStatus({
+              checking: false,
+              available: true,
+              message: 'Phòng đã được giải phóng và sẵn sàng đặt!'
+            })
+            setError(null)
+          }
+        }
+      } else {
+        setError(res.error || 'Hủy đơn thất bại')
+      }
+    } catch (err) {
+      setError(err.message || 'Lỗi khi hủy đơn đặt phòng')
+    } finally {
+      setCancellingPending(false)
+    }
+  }
+
+  const isMatchingPending = pendingBooking && pendingBooking.checkIn === formData.checkIn && pendingBooking.checkOut === formData.checkOut
+
   const handleSubmit = (e) => {
     e.preventDefault()
 
@@ -207,6 +275,12 @@ export default function Booking() {
 
     if (new Date(formData.checkIn) >= new Date(formData.checkOut)) {
       setError('Ngày trả phòng phải sau ngày nhận phòng')
+      return
+    }
+
+    // Nếu chính là đơn PENDING của người dùng này -> chuyển thẳng sang thanh toán đơn đó
+    if (isMatchingPending) {
+      navigate(`/payment/${pendingBooking.id}`, { state: pendingBooking })
       return
     }
 
@@ -346,7 +420,41 @@ export default function Booking() {
                     </div>
                   )}
 
-                  {!availabilityStatus.checking && availabilityStatus.available === false && (
+                  {/* Hiển thị thông báo nếu người dùng đang có đơn PENDING giữ phòng này */}
+                  {pendingBooking && (
+                    <div className="mt-3 p-4 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-bold text-sm flex items-center gap-1.5 text-amber-900">
+                            <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
+                            <span>Bạn đang có đơn #{pendingBooking.id} ({pendingBooking.bookingCode}) chưa thanh toán cho phòng này!</span>
+                          </p>
+                          <p className="text-xs text-amber-800 mt-1">
+                            Lịch đặt: <strong>{new Date(pendingBooking.checkIn).toLocaleDateString('vi-VN')}</strong> → <strong>{new Date(pendingBooking.checkOut).toLocaleDateString('vi-VN')}</strong> ({Number(pendingBooking.totalPrice).toLocaleString('vi-VN')} đ)
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/payment/${pendingBooking.id}`, { state: pendingBooking })}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold shadow-sm transition"
+                        >
+                          Tiếp Tục Thanh Toán Đơn #{pendingBooking.id}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelPendingBooking}
+                          disabled={cancellingPending}
+                          className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 rounded text-xs font-semibold transition"
+                        >
+                          {cancellingPending ? 'Đang Giải Phóng Phòng...' : 'Hủy Đơn Này Để Giải Phóng Phòng'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!availabilityStatus.checking && availabilityStatus.available === false && !isMatchingPending && (
                     <div className="mt-3 p-3.5 bg-red-50 border border-red-300 text-red-700 text-sm rounded-lg flex items-start gap-2.5 shadow-sm">
                       <AlertCircle size={20} className="flex-shrink-0 text-red-600 mt-0.5" />
                       <div>
@@ -474,12 +582,14 @@ export default function Booking() {
                 <button
                   type="submit"
                   className="btn-primary w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!room || loading || !isRoomActive || availabilityStatus.available === false || availabilityStatus.checking}
+                  disabled={!room || loading || !isRoomActive || (!isMatchingPending && availabilityStatus.available === false) || availabilityStatus.checking}
                 >
                   {!isRoomActive 
                     ? 'Phòng Tạm Ngưng Phục Vụ' 
                     : availabilityStatus.checking 
                     ? 'Đang Kiểm Tra Phòng Trống...' 
+                    : isMatchingPending
+                    ? `Thanh Toán Đơn Đang Chờ #${pendingBooking.id}`
                     : availabilityStatus.available === false 
                     ? 'Phòng Đã Kín Chỗ - Chọn Ngày Khác' 
                     : 'Tiếp Tục Thanh Toán'}

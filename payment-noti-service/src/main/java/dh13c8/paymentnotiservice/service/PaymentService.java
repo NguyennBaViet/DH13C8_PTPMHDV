@@ -20,6 +20,10 @@ public interface PaymentService {
 
     PaymentResponse confirmStripePayment(String paymentIntentId);
 
+    PaymentResponse createVNPayPayment(Long userId, CreatePaymentRequest req, jakarta.servlet.http.HttpServletRequest request);
+
+    PaymentResponse processVNPayReturn(Map<String, String> params);
+
     PaymentResponse refund(Long paymentId, RefundRequest req, Long userId, String role);
 
     PaymentResponse refundInternal(Long paymentId, BigDecimal amount, String reason);

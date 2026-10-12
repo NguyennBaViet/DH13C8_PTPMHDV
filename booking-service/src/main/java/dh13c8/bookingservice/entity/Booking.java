@@ -70,7 +70,7 @@ public class Booking {
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private BookingStatus status;
 
     @Column(name = "special_requests", length = 1000)
@@ -96,6 +96,15 @@ public class Booking {
 
     @Column(name = "cancel_reason", length = 500)
     private String cancelReason;
+
+    @Column(name = "cancellation_fee", precision = 15, scale = 2)
+    private BigDecimal cancellationFee;
+
+    @Column(name = "refund_amount", precision = 15, scale = 2)
+    private BigDecimal refundAmount;
+
+    @Column(name = "cancel_admin_note", length = 500)
+    private String cancelAdminNote;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

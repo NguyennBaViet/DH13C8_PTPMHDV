@@ -4,6 +4,7 @@ import dh13c8.bookingservice.dto.ApiResponse;
 import dh13c8.bookingservice.dto.request.CreateBookingRequest;
 import dh13c8.bookingservice.dto.request.UpdateBookingRequest;
 import dh13c8.bookingservice.dto.response.BookingResponse;
+import dh13c8.bookingservice.entity.BookingStatus;
 import dh13c8.bookingservice.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -164,7 +165,40 @@ public class BookingController {
 
         String reason = body != null ? body.getOrDefault("reason", "Không có lý do") : "Không có lý do";
         BookingResponse response = bookingService.cancelBooking(id, userId, role, reason);
-        return ResponseEntity.ok(ApiResponse.ok("Hủy booking thành công", response));
+        String msg = response.getStatus() == BookingStatus.CANCEL_REQUESTED
+                ? "Yêu cầu hủy đơn đã được gửi tới Quản trị viên để phê duyệt"
+                : "Hủy booking thành công";
+        return ResponseEntity.ok(ApiResponse.ok(msg, response));
+    }
+
+    // ============================================================
+    // 8.5. PHÊ DUYỆT HỦY (ADMIN/STAFF)
+    // POST /api/bookings/{id}/approve-cancel
+    // ============================================================
+    @PostMapping("/{id}/approve-cancel")
+    public ResponseEntity<ApiResponse<BookingResponse>> approveCancel(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", defaultValue = "GUEST") String role) {
+
+        log.info("📥 Admin ({}) phê duyệt yêu cầu hủy booking id={}", role, id);
+        BookingResponse response = bookingService.approveCancellation(id, role);
+        return ResponseEntity.ok(ApiResponse.ok("Phê duyệt hủy đơn và hoàn tiền thành công", response));
+    }
+
+    // ============================================================
+    // 8.6. TỪ CHỐI YÊU CẦU HỦY (ADMIN/STAFF)
+    // POST /api/bookings/{id}/reject-cancel
+    // ============================================================
+    @PostMapping("/{id}/reject-cancel")
+    public ResponseEntity<ApiResponse<BookingResponse>> rejectCancel(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", defaultValue = "GUEST") String role,
+            @RequestBody(required = false) Map<String, String> body) {
+
+        String reason = body != null ? body.getOrDefault("reason", "Từ chối hủy theo chính sách") : "Từ chối hủy theo chính sách";
+        log.info("⛔ Admin ({}) từ chối yêu cầu hủy booking id={}. Lý do={}", role, id, reason);
+        BookingResponse response = bookingService.rejectCancellation(id, role, reason);
+        return ResponseEntity.ok(ApiResponse.ok("Đã từ chối yêu cầu hủy đơn", response));
     }
 
     // ============================================================

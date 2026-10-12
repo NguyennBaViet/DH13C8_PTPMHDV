@@ -31,6 +31,12 @@ public class BookingResponse {
     private String contactEmail;
     private String contactPhone;
     private LocalDateTime lockExpiresAt;
+    private LocalDateTime cancelledAt;
+    private String cancelReason;
+    private BigDecimal cancellationFee;
+    private BigDecimal refundAmount;
+    private String cancelAdminNote;
+    private Long paymentId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

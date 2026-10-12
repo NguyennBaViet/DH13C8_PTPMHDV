@@ -26,4 +26,8 @@ public class CreatePaymentRequest {
     private String successUrl;
 
     private String cancelUrl;
+
+    private String bankCode;
+
+    private String returnUrl;
 }

@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -80,6 +81,26 @@ public class BookingServiceImpl implements BookingService {
 
         if (roomType == null || roomType.getId() == null) {
             throw new BusinessException(ErrorCode.ROOM_NOT_AVAILABLE, "Loại phòng không tồn tại");
+        }
+
+        // 1.25. Nếu chính user này đã có đơn PENDING chưa thanh toán cho cùng phòng và ngày: tái sử dụng đơn cũ
+        List<Booking> existingUserBookings = bookingRepo.findByUserIdAndRoomTypeIdAndCheckInAndCheckOut(
+                userId, req.getRoomTypeId(), req.getCheckIn(), req.getCheckOut());
+        Optional<Booking> pendingBooking = existingUserBookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.PENDING && b.getPaymentId() == null)
+                .findFirst();
+
+        if (pendingBooking.isPresent()) {
+            Booking b = pendingBooking.get();
+            log.info("🔄 Tái sử dụng đơn booking PENDING id={} của userId={}", b.getId(), userId);
+            b.setLockExpiresAt(LocalDateTime.now().plusMinutes(15));
+            b.setContactName(req.getContactName());
+            b.setContactEmail(req.getContactEmail());
+            b.setContactPhone(req.getContactPhone());
+            b.setSpecialRequests(req.getSpecialRequests());
+            b.setGuests(req.getGuests());
+            bookingRepo.save(b);
+            return toResponse(b);
         }
 
         // 1.3. Check availability
@@ -306,44 +327,67 @@ public class BookingServiceImpl implements BookingService {
     }
 
     // ============================================================
-    // 5. HỦY BOOKING
+    // 5. HỦY BOOKING / YÊU CẦU HỦY
     // ============================================================
     @Override
     @Transactional
     public BookingResponse cancelBooking(Long bookingId, Long userId, String role, String reason) {
         Booking b = findBooking(bookingId);
 
-        if (!"ADMIN".equals(role) && !"STAFF".equals(role) && !b.getUserId().equals(userId)) {
+        boolean isAdminOrStaff = "ADMIN".equals(role) || "STAFF".equals(role);
+        if (!isAdminOrStaff && !b.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         if (b.getStatus() == BookingStatus.CANCELLED || b.getStatus() == BookingStatus.REFUNDED) {
             throw new BusinessException(ErrorCode.CANNOT_CANCEL, "Booking đã bị hủy trước đó");
         }
+        if (b.getStatus() == BookingStatus.CANCEL_REQUESTED) {
+            throw new BusinessException(ErrorCode.CANNOT_CANCEL, "Đơn đặt phòng đang chờ Quản trị viên duyệt hủy");
+        }
         if (b.getStatus() == BookingStatus.COMPLETED || b.getStatus() == BookingStatus.CHECKED_IN) {
             throw new BusinessException(ErrorCode.CANNOT_CANCEL,
-                    "Không thể hủy booking đã check-in hoặc đã hoàn thành");
+                    "Không thể hủy booking đã nhận phòng hoặc đã hoàn thành");
+        }
+        if (b.getCheckIn().isBefore(LocalDate.now())) {
+            throw new BusinessException(ErrorCode.CANNOT_CANCEL, "Không thể hủy booking sau ngày nhận phòng");
         }
 
-        // Release phòng
+        // Tính toán phí hủy & hoàn tiền theo chính sách
+        long hoursUntilCheckIn = ChronoUnit.HOURS.between(LocalDateTime.now(), b.getCheckIn().atStartOfDay());
+        BigDecimal refundAmount;
+        BigDecimal cancellationFee;
+
+        boolean isPaid = (b.getPaymentId() != null);
+        boolean isPending = (b.getStatus() == BookingStatus.PENDING);
+
+        if (isPending || hoursUntilCheckIn >= cancelFreeBeforeHours) {
+            refundAmount = b.getTotalPrice(); // Hoàn 100%
+            cancellationFee = BigDecimal.ZERO; // Phí hủy 0đ
+        } else {
+            refundAmount = b.getTotalPrice().multiply(BigDecimal.valueOf(0.5)).setScale(2, RoundingMode.HALF_UP); // Hoàn 50%
+            cancellationFee = b.getTotalPrice().subtract(refundAmount); // Phí hủy 50%
+        }
+
+        b.setCancellationFee(cancellationFee);
+        b.setRefundAmount(refundAmount);
+        b.setCancelReason(reason != null && !reason.isBlank() ? reason : "Khách yêu cầu hủy phòng");
+        b.setCancelledAt(LocalDateTime.now());
+
+        // NẾU LÀ KHÁCH HÀNG VÀ ĐƠN ĐÃ ĐƯỢC XÁC NHẬN HOẶC ĐÃ THANH TOÁN
+        // -> CHUYỂN TRẠNG THÁI SANG CANCEL_REQUESTED (CHỜ ADMIN DUYỆT HỦY)
+        if (!isAdminOrStaff && (b.getStatus() == BookingStatus.CONFIRMED || isPaid)) {
+            b.setStatus(BookingStatus.CANCEL_REQUESTED);
+            bookingRepo.save(b);
+            log.info("⏳ Khách hàng {} gửi yêu cầu hủy booking #{}. Chờ Admin phê duyệt.", userId, b.getBookingCode());
+            return toResponse(b);
+        }
+
+        // NẾU LÀ ADMIN/STAFF HOẶC ĐƠN PENDING CHƯA THANH TOÁN:
+        // HỦY TRỰC TIẾP, GIẢI PHÓNG PHÒNG VÀ HOÀN TIỀN
         roomClient.releaseRooms(buildLockReq(b));
 
-        // Nếu đã thanh toán → hoàn tiền
-        if (b.getPaymentId() != null) {
+        if (isPaid && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
             try {
-                // Nếu đang PENDING (bị từ chối duyệt) hoặc hủy trước giờ quy định: hoàn 100%
-                boolean isPending = (b.getStatus() == BookingStatus.PENDING);
-                long hoursUntilCheckIn = ChronoUnit.HOURS.between(LocalDateTime.now(),
-                        b.getCheckIn().atStartOfDay());
-                BigDecimal refundAmount;
-
-                if (isPending || hoursUntilCheckIn >= cancelFreeBeforeHours) {
-                    refundAmount = b.getTotalPrice(); // Hoàn 100%
-                    log.info("💰 Hoàn 100% = {}", refundAmount);
-                } else {
-                    refundAmount = b.getTotalPrice().multiply(BigDecimal.valueOf(0.5)); // Hoàn 50%
-                    log.info("💰 Hoàn 50% = {} (hủy sát giờ)", refundAmount);
-                }
-
                 paymentClient.refund(b.getPaymentId(), refundAmount);
                 b.setStatus(BookingStatus.REFUNDED);
             } catch (Exception e) {
@@ -354,12 +398,68 @@ public class BookingServiceImpl implements BookingService {
             b.setStatus(BookingStatus.CANCELLED);
         }
 
-        b.setCancelledAt(LocalDateTime.now());
-        b.setCancelReason(reason);
         b.setLockExpiresAt(null);
         bookingRepo.save(b);
 
         log.info("✅ Đã hủy booking {} - status={}", b.getBookingCode(), b.getStatus());
+        return toResponse(b);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse approveCancellation(Long bookingId, String role) {
+        if (!"ADMIN".equals(role) && !"STAFF".equals(role)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Chỉ STAFF hoặc ADMIN mới có quyền duyệt hủy đơn");
+        }
+        Booking b = findBooking(bookingId);
+        if (b.getStatus() != BookingStatus.CANCEL_REQUESTED) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION,
+                    "Chỉ phê duyệt được các đơn đang ở trạng thái Yêu cầu hủy (CANCEL_REQUESTED)");
+        }
+
+        // 1. Giải phóng phòng
+        roomClient.releaseRooms(buildLockReq(b));
+
+        // 2. Hoàn tiền nếu đã thanh toán
+        BigDecimal refundAmt = b.getRefundAmount() != null ? b.getRefundAmount() : b.getTotalPrice();
+        if (b.getPaymentId() != null && refundAmt.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                paymentClient.refund(b.getPaymentId(), refundAmt);
+                b.setStatus(BookingStatus.REFUNDED);
+            } catch (Exception e) {
+                log.error("❌ Hoàn tiền qua cổng payment thất bại, chuyển CANCELLED", e);
+                b.setStatus(BookingStatus.CANCELLED);
+            }
+        } else {
+            b.setStatus(BookingStatus.CANCELLED);
+        }
+
+        b.setLockExpiresAt(null);
+        b.setCancelAdminNote("Quản trị viên đã phê duyệt hủy đơn và hoàn tiền theo chính sách");
+        bookingRepo.save(b);
+
+        log.info("✅ Admin ({}) đã phê duyệt hủy booking #{}", role, b.getBookingCode());
+        return toResponse(b);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse rejectCancellation(Long bookingId, String role, String reason) {
+        if (!"ADMIN".equals(role) && !"STAFF".equals(role)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "Chỉ STAFF hoặc ADMIN mới có quyền từ chối yêu cầu hủy");
+        }
+        Booking b = findBooking(bookingId);
+        if (b.getStatus() != BookingStatus.CANCEL_REQUESTED) {
+            throw new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION,
+                    "Chỉ từ chối được các đơn đang ở trạng thái Yêu cầu hủy (CANCEL_REQUESTED)");
+        }
+
+        // Khôi phục trạng thái về CONFIRMED (giữ nguyên phòng đã đặt)
+        b.setStatus(BookingStatus.CONFIRMED);
+        b.setCancelAdminNote(reason != null && !reason.isBlank() ? reason : "Từ chối hủy do không thỏa mãn chính sách hủy");
+        bookingRepo.save(b);
+
+        log.info("⛔ Admin ({}) đã từ chối yêu cầu hủy booking #{}. Lý do: {}", role, b.getBookingCode(), b.getCancelAdminNote());
         return toResponse(b);
     }
 
@@ -497,6 +597,12 @@ public class BookingServiceImpl implements BookingService {
                 .contactEmail(b.getContactEmail())
                 .contactPhone(b.getContactPhone())
                 .lockExpiresAt(b.getLockExpiresAt())
+                .cancelledAt(b.getCancelledAt())
+                .cancelReason(b.getCancelReason())
+                .cancellationFee(b.getCancellationFee())
+                .refundAmount(b.getRefundAmount())
+                .cancelAdminNote(b.getCancelAdminNote())
+                .paymentId(b.getPaymentId())
                 .createdAt(b.getCreatedAt())
                 .updatedAt(b.getUpdatedAt())
                 .build();

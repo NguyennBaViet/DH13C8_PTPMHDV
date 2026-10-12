@@ -1,6 +1,38 @@
 import api from './api'
 
 const paymentService = {
+  // Create VNPay payment URL (POST /api/payments/vnpay/create-url)
+  createVNPayPayment: async (paymentData) => {
+    try {
+      const response = await api.post('/payments/vnpay/create-url', paymentData)
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi khởi tạo thanh toán VNPay'
+      }
+    }
+  },
+
+  // Verify VNPay callback / return (GET /api/payments/vnpay/callback)
+  verifyVNPayCallback: async (params) => {
+    try {
+      const response = await api.get('/payments/vnpay/callback', { params })
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Xác thực thanh toán VNPay thất bại'
+      }
+    }
+  },
+
   // Create payment (POST /api/payments)
   createPayment: async (paymentData) => {
     try {

@@ -6,6 +6,7 @@ import dh13c8.paymentnotiservice.dto.request.ProcessPaymentRequest;
 import dh13c8.paymentnotiservice.dto.request.RefundRequest;
 import dh13c8.paymentnotiservice.dto.response.PaymentResponse;
 import dh13c8.paymentnotiservice.service.PaymentService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +67,51 @@ public class PaymentController {
         log.info("POST /api/payments/stripe/confirm - intentId={}", paymentIntentId);
         PaymentResponse response = paymentService.confirmStripePayment(paymentIntentId);
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
+    }
+
+    @PostMapping("/vnpay/create-url")
+    public ResponseEntity<ApiResponse<PaymentResponse>> createVNPayUrl(
+            @RequestHeader(value = "X-User-Id", defaultValue = "1") Long userId,
+            @Valid @RequestBody CreatePaymentRequest req,
+            HttpServletRequest request) {
+
+        log.info("POST /api/payments/vnpay/create-url - userId={}, bookingId={}", userId, req.getBookingId());
+        PaymentResponse response = paymentService.createVNPayPayment(userId, req, request);
+        return ResponseEntity.ok(ApiResponse.ok("Khởi tạo giao dịch VNPay thành công", response));
+    }
+
+    @GetMapping({"/vnpay/callback", "/vnpay/return"})
+    public ResponseEntity<ApiResponse<PaymentResponse>> processVNPayCallback(
+            @RequestParam Map<String, String> params) {
+
+        log.info("GET /api/payments/vnpay/callback - params={}", params);
+        PaymentResponse response = paymentService.processVNPayReturn(params);
+        return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
+    }
+
+    @GetMapping("/vnpay/ipn")
+    public ResponseEntity<Map<String, String>> vnpayIpn(
+            @RequestParam Map<String, String> params) {
+
+        log.info("GET /api/payments/vnpay/ipn - params={}", params);
+        try {
+            PaymentResponse response = paymentService.processVNPayReturn(params);
+            if ("SUCCESS".equalsIgnoreCase(response.getStatus())) {
+                return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success"));
+            } else {
+                return ResponseEntity.ok(Map.of("RspCode", "00", "Message", "Confirm Success (Status: " + response.getStatus() + ")"));
+            }
+        } catch (dh13c8.paymentnotiservice.exception.BusinessException e) {
+            if (e.getErrorCode() == dh13c8.paymentnotiservice.exception.ErrorCode.INVALID_SIGNATURE) {
+                return ResponseEntity.ok(Map.of("RspCode", "97", "Message", "Invalid Checksum"));
+            }
+            if (e.getErrorCode() == dh13c8.paymentnotiservice.exception.ErrorCode.PAYMENT_NOT_FOUND) {
+                return ResponseEntity.ok(Map.of("RspCode", "01", "Message", "Order not found"));
+            }
+            return ResponseEntity.ok(Map.of("RspCode", "99", "Message", "Unknown error: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("RspCode", "99", "Message", "Unknown error"));
+        }
     }
 
     @PostMapping("/{id}/refund")

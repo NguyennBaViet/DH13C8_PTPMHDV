@@ -10,6 +10,7 @@ import HotelSearch from './pages/HotelSearch'
 import HotelDetail from './pages/HotelDetail'
 import Booking from './pages/Booking'
 import Payment from './pages/Payment'
+import VNPayReturn from './pages/VNPayReturn'
 import MyBookings from './pages/MyBookings'
 import UserProfile from './pages/UserProfile'
 import AdminDashboard from './pages/admin/Dashboard'
@@ -52,6 +53,7 @@ function App() {
                       <Route path="/booking" element={<Booking />} />
                       <Route path="/booking/:roomId" element={<Booking />} />
                       <Route path="/payment/:bookingId" element={<Payment />} />
+                      <Route path="/payment/vnpay-return" element={<VNPayReturn />} />
                       <Route path="/my-bookings" element={<MyBookings />} />
                       <Route path="/profile" element={<UserProfile />} />
                       <Route path="*" element={<Navigate to="/" />} />

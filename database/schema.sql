@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     discount_amount  DECIMAL(12,2) NOT NULL DEFAULT 0,
     total_amount     DECIMAL(12,2) NOT NULL,
     promotion_id     BIGINT        NULL,
-    status           ENUM('PENDING','CONFIRMED','CHECKED_IN','COMPLETED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+    status           VARCHAR(30)   NOT NULL DEFAULT 'PENDING',
     special_requests TEXT,
     cancelled_at     DATETIME      NULL,
     cancel_reason    TEXT          NULL,

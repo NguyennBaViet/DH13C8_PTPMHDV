@@ -106,6 +106,38 @@ const bookingService = {
     }
   },
 
+  // Approve cancel request (Admin/Staff)
+  approveCancellation: async (bookingId) => {
+    try {
+      const response = await api.post(`/bookings/${bookingId}/approve-cancel`)
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi phê duyệt hủy đơn'
+      }
+    }
+  },
+
+  // Reject cancel request (Admin/Staff)
+  rejectCancellation: async (bookingId, reason = '') => {
+    try {
+      const response = await api.post(`/bookings/${bookingId}/reject-cancel`, { reason })
+      return {
+        success: true,
+        data: response.data?.data || response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Lỗi từ chối hủy đơn'
+      }
+    }
+  },
+
   // Check-in (Admin/Staff)
   checkInBooking: async (bookingId) => {
     try {

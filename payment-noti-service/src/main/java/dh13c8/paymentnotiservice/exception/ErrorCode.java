@@ -15,7 +15,9 @@ public enum ErrorCode {
     BOOKING_SERVICE_UNAVAILABLE("BOOKING_SERVICE_UNAVAILABLE", "Không thể kết nối đến Booking Service", HttpStatus.SERVICE_UNAVAILABLE),
     NOTIFICATION_NOT_FOUND("NOTIFICATION_NOT_FOUND", "Không tìm thấy thông báo", HttpStatus.NOT_FOUND),
     UNAUTHORIZED("UNAUTHORIZED", "Bạn không có quyền thực hiện thao tác này", HttpStatus.FORBIDDEN),
-    STRIPE_ERROR("STRIPE_ERROR", "Lỗi xử lý qua cổng thanh toán Stripe", HttpStatus.BAD_REQUEST);
+    STRIPE_ERROR("STRIPE_ERROR", "Lỗi xử lý qua cổng thanh toán Stripe", HttpStatus.BAD_REQUEST),
+    VNPAY_ERROR("VNPAY_ERROR", "Lỗi xử lý qua cổng thanh toán VNPay", HttpStatus.BAD_REQUEST),
+    INVALID_SIGNATURE("INVALID_SIGNATURE", "Chữ ký số VNPay không hợp lệ", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

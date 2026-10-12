@@ -30,7 +30,10 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             "/api/reviews/hotel",
             "/api/hotels",
             "/api/rooms",
-            "/api/amenities"
+            "/api/amenities",
+            "/api/payments/vnpay/callback",
+            "/api/payments/vnpay/return",
+            "/api/payments/vnpay/ipn"
     );
 
     public AuthFilter(JwtTokenProvider jwtTokenProvider) {
