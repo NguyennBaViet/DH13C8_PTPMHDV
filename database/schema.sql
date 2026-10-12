@@ -2,13 +2,13 @@
 -- HỆ THỐNG ĐẶT PHÒNG KHÁCH SẠN - DATABASE SCHEMA
 -- Database : khachsan
 -- Engine   : MySQL 8.x / MariaDB
--- Charset  : utf8mb4_unicode_ci
+-- Charset  : utf8_general_ci
 -- Author   : DH13C8 Team
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS khachsan
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+    CHARACTER SET utf8
+    COLLATE utf8_general_ci;
 
 USE khachsan;
 
@@ -18,24 +18,27 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. USERS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (
-    id           BIGINT          NOT NULL AUTO_INCREMENT,
-    username     VARCHAR(50)     NOT NULL,
-    email        VARCHAR(100)    NOT NULL,
-    password     VARCHAR(255)    NOT NULL,
-    full_name    VARCHAR(100),
-    phone        VARCHAR(20),
-    avatar_url   VARCHAR(500),
-    address      VARCHAR(300),
-    role         ENUM('GUEST','STAFF','ADMIN') NOT NULL DEFAULT 'GUEST',
-    is_active    TINYINT(1)      NOT NULL DEFAULT 1,
-    created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id                      BIGINT          NOT NULL AUTO_INCREMENT,
+    username                VARCHAR(50)     NOT NULL,
+    email                   VARCHAR(100)    NOT NULL,
+    password                VARCHAR(255)    NOT NULL,
+    full_name               VARCHAR(100),
+    phone                   VARCHAR(20),
+    avatar_url              VARCHAR(500),
+    address                 VARCHAR(300),
+    role                    ENUM('GUEST','STAFF','ADMIN') NOT NULL DEFAULT 'GUEST',
+    is_active               TINYINT(1)      NOT NULL DEFAULT 1,
+    email_verified          TINYINT(1)      NOT NULL DEFAULT 0,
+    verification_token      VARCHAR(255)    NULL,
+    verification_token_expires_at DATETIME  NULL,
+    created_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_username (username),
     UNIQUE KEY uq_users_email    (email),
     KEY idx_users_role           (role),
     KEY idx_users_active         (is_active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 2. REFRESH_TOKENS  (Auth Service – cấp phát lại JWT)
@@ -52,7 +55,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     KEY idx_rt_user_id      (user_id),
     CONSTRAINT fk_rt_user FOREIGN KEY (user_id)
         REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 3. HOTELS
@@ -81,7 +84,7 @@ CREATE TABLE IF NOT EXISTS hotels (
     KEY idx_hotels_city   (city),
     KEY idx_hotels_star   (star_rating),
     KEY idx_hotels_active (is_active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 4. AMENITIES  (tiện nghi dùng chung cho hotel & room)
@@ -94,7 +97,7 @@ CREATE TABLE IF NOT EXISTS amenities (
     created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_amenities_name (name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 5. HOTEL_AMENITIES  (M-N: hotels ↔ amenities)
@@ -105,7 +108,7 @@ CREATE TABLE IF NOT EXISTS hotel_amenities (
     PRIMARY KEY (hotel_id, amenity_id),
     CONSTRAINT fk_ha_hotel   FOREIGN KEY (hotel_id)   REFERENCES hotels(id)    ON DELETE CASCADE,
     CONSTRAINT fk_ha_amenity FOREIGN KEY (amenity_id) REFERENCES amenities(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 6. ROOMS
@@ -130,7 +133,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     KEY idx_rooms_type     (room_type),
     KEY idx_rooms_price    (price_per_night),
     CONSTRAINT fk_rooms_hotel FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 7. ROOM_AMENITIES  (M-N: rooms ↔ amenities)
@@ -141,7 +144,7 @@ CREATE TABLE IF NOT EXISTS room_amenities (
     PRIMARY KEY (room_id, amenity_id),
     CONSTRAINT fk_ra_room    FOREIGN KEY (room_id)    REFERENCES rooms(id)     ON DELETE CASCADE,
     CONSTRAINT fk_ra_amenity FOREIGN KEY (amenity_id) REFERENCES amenities(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 8. ROOM_AVAILABILITY  (trạng thái phòng theo từng ngày)
@@ -159,7 +162,7 @@ CREATE TABLE IF NOT EXISTS room_availability (
     KEY idx_avail_date    (date),
     KEY idx_avail_status  (status),
     CONSTRAINT fk_avail_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 9. PROMOTIONS  (mã khuyến mãi)
@@ -180,43 +183,55 @@ CREATE TABLE IF NOT EXISTS promotions (
     PRIMARY KEY (id),
     UNIQUE KEY uq_promo_code  (code),
     KEY idx_promo_active      (is_active)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 10. BOOKINGS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS bookings (
-    id               BIGINT        NOT NULL AUTO_INCREMENT,
-    booking_code     VARCHAR(20)   NOT NULL,
-    user_id          BIGINT        NOT NULL,
-    room_id          BIGINT        NOT NULL,
-    hotel_id         BIGINT        NOT NULL,
-    check_in_date    DATE          NOT NULL,
-    check_out_date   DATE          NOT NULL,
-    num_guests       TINYINT       NOT NULL DEFAULT 1,
-    total_nights     INT           NOT NULL,
-    room_price       DECIMAL(12,2) NOT NULL,
-    discount_amount  DECIMAL(12,2) NOT NULL DEFAULT 0,
-    total_amount     DECIMAL(12,2) NOT NULL,
-    promotion_id     BIGINT        NULL,
-    status           VARCHAR(30)   NOT NULL DEFAULT 'PENDING',
-    special_requests TEXT,
-    cancelled_at     DATETIME      NULL,
-    cancel_reason    TEXT          NULL,
-    created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id                  BIGINT        NOT NULL AUTO_INCREMENT,
+    booking_code        VARCHAR(32)   NOT NULL,
+    user_id             BIGINT        NOT NULL,
+    room_id             BIGINT        NULL,
+    room_type_id        BIGINT        NOT NULL,
+    hotel_id            BIGINT        NOT NULL,
+    hotel_name          VARCHAR(255),
+    room_type_name      VARCHAR(255),
+    check_in            DATE          NOT NULL,
+    check_out           DATE          NOT NULL,
+    nights              INT           NOT NULL,
+    rooms               INT           NOT NULL,
+    guests              INT           NOT NULL,
+    price_per_night     DECIMAL(15,2),
+    sub_total           DECIMAL(15,2),
+    tax_amount          DECIMAL(15,2),
+    total_price         DECIMAL(15,2) NOT NULL,
+    status              VARCHAR(30)   NOT NULL DEFAULT 'PENDING',
+    special_requests    VARCHAR(1000),
+    contact_name        VARCHAR(150),
+    contact_email       VARCHAR(150),
+    contact_phone       VARCHAR(20),
+    payment_id          BIGINT,
+    lock_expires_at     DATETIME,
+    cancelled_at        DATETIME      NULL,
+    cancel_reason       VARCHAR(500),
+    cancellation_fee    DECIMAL(15,2),
+    refund_amount       DECIMAL(15,2),
+    cancel_admin_note   VARCHAR(500),
+    version             BIGINT,
+    created_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_booking_code   (booking_code),
     KEY idx_bookings_user_id     (user_id),
     KEY idx_bookings_room_id     (room_id),
     KEY idx_bookings_hotel_id    (hotel_id),
     KEY idx_bookings_status      (status),
-    KEY idx_bookings_checkin     (check_in_date),
+    KEY idx_bookings_checkin     (check_in),
     CONSTRAINT fk_bookings_user      FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE RESTRICT,
-    CONSTRAINT fk_bookings_room      FOREIGN KEY (room_id)      REFERENCES rooms(id)      ON DELETE RESTRICT,
-    CONSTRAINT fk_bookings_hotel     FOREIGN KEY (hotel_id)     REFERENCES hotels(id)     ON DELETE RESTRICT,
-    CONSTRAINT fk_bookings_promotion FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    CONSTRAINT fk_bookings_room      FOREIGN KEY (room_id)      REFERENCES rooms(id)      ON DELETE SET NULL,
+    CONSTRAINT fk_bookings_hotel     FOREIGN KEY (hotel_id)     REFERENCES hotels(id)     ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 11. PAYMENTS
@@ -244,7 +259,7 @@ CREATE TABLE IF NOT EXISTS payments (
     KEY idx_payments_status      (status),
     CONSTRAINT fk_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE RESTRICT,
     CONSTRAINT fk_payments_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 12. REVIEWS  (đánh giá sau khi hoàn tất booking)
@@ -269,7 +284,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     CONSTRAINT fk_reviews_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
     CONSTRAINT fk_reviews_hotel   FOREIGN KEY (hotel_id)   REFERENCES hotels(id)   ON DELETE CASCADE,
     CONSTRAINT fk_reviews_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 13. NOTIFICATIONS
@@ -293,7 +308,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     KEY idx_notif_status     (status),
     CONSTRAINT fk_notif_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
     CONSTRAINT fk_notif_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- ============================================================
 -- 14. AUDIT_LOG  (ghi log mọi thao tác quan trọng)
@@ -313,6 +328,6 @@ CREATE TABLE IF NOT EXISTS audit_log (
     KEY idx_audit_user_id    (user_id),
     KEY idx_audit_entity     (entity_type, entity_id),
     KEY idx_audit_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
